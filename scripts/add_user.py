@@ -4,6 +4,7 @@ Add or update a user in users.db.
 Usage:
     python scripts/add_user.py <username> <password> [--db-path PATH]
 """
+
 import argparse
 import hashlib
 import hmac
@@ -14,7 +15,7 @@ from pathlib import Path
 
 import bcrypt
 
-USERS_DB = Path(__file__).parent.parent / "users.db"
+USERS_DB = Path(__file__).parent.parent / "users/users.db"
 
 
 CREATE_TABLE = """
@@ -43,11 +44,15 @@ def _init_user_db(db_path: str, username: str, encryption_key: str | None) -> No
     if encryption_key:
         try:
             import sqlcipher3
+
             conn = sqlcipher3.connect(db_path)
             key = _derive_db_key(username, encryption_key)
             conn.execute(f"PRAGMA key = '{key}'")
         except ImportError:
-            print("Warning: sqlcipher3 not installed, creating unencrypted DB.", file=sys.stderr)
+            print(
+                "Warning: sqlcipher3 not installed, creating unencrypted DB.",
+                file=sys.stderr,
+            )
             conn = sqlite3.connect(db_path)
     else:
         conn = sqlite3.connect(db_path)
@@ -58,7 +63,9 @@ def main():
     parser = argparse.ArgumentParser(description="Add or update a user in users.db")
     parser.add_argument("username", help="Username")
     parser.add_argument("password", help="Password (will be hashed with bcrypt)")
-    parser.add_argument("--name", default=None, help="Display name (defaults to username)")
+    parser.add_argument(
+        "--name", default=None, help="Display name (defaults to username)"
+    )
     parser.add_argument("--email", default=None, help="Email address (optional)")
     parser.add_argument(
         "--db-path",
@@ -77,7 +84,9 @@ def main():
     )
     args = parser.parse_args()
 
-    db_path = args.db_path or str(Path(__file__).parent.parent / "users" / f"{args.username}.db")
+    db_path = args.db_path or str(
+        Path(__file__).parent.parent / "users" / f"{args.username}.db"
+    )
     users_db = Path(args.users_db)
     encryption_key = args.encryption_key or os.environ.get("DB_ENCRYPTION_KEY")
     name = args.name or args.username
