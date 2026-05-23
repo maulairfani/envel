@@ -109,9 +109,13 @@ def _ensure_migrated(conn: sqlite3.Connection, path: str) -> None:
             id                          INTEGER PRIMARY KEY CHECK (id = 1),
             morning_briefing_enabled    INTEGER NOT NULL DEFAULT 1,
             morning_briefing_prompt     TEXT,
-            morning_briefing_last_shown TEXT
+            morning_briefing_last_shown TEXT,
+            onboarding_completed_at     TEXT
         )
     """)
+    user_settings_cols = {r["name"] for r in conn.execute("PRAGMA table_info(user_settings)").fetchall()}
+    if "onboarding_completed_at" not in user_settings_cols:
+        conn.execute("ALTER TABLE user_settings ADD COLUMN onboarding_completed_at TEXT")
     conn.execute("INSERT OR IGNORE INTO user_settings (id) VALUES (1)")
     conn.commit()
     _MIGRATED.add(path)
@@ -153,6 +157,102 @@ def add_account(username: str, name: str, type_: str, balance: float) -> dict:
             "SELECT id, name, type, balance FROM accounts WHERE id = ?", (cur.lastrowid,)
         ).fetchone()
     return dict(row)
+
+
+def get_onboarding_status(username: str) -> dict:
+    period = __import__("datetime").datetime.now().strftime("%Y-%m")
+    with get_conn(username) as conn:
+        accounts = conn.execute("SELECT id, balance FROM accounts").fetchall()
+        has_accounts = len(accounts) > 0
+        has_balance = any(a["balance"] > 0 for a in accounts)
+        total_balance = sum(a["balance"] for a in accounts)
+
+        has_targets = conn.execute(
+            "SELECT COUNT(*) AS n FROM envelopes WHERE type = 'expense' AND target_type IS NOT NULL"
+        ).fetchone()["n"] > 0
+
+        any_assigned = conn.execute("SELECT COUNT(*) AS n FROM budget_periods").fetchone()["n"] > 0
+
+        envelopes = conn.execute("SELECT id FROM envelopes WHERE type = 'expense'").fetchall()
+        total_available = sum(_envelope_available(conn, e["id"], period) for e in envelopes)
+        ready_to_assign = total_balance - total_available
+        all_assigned = has_balance and abs(ready_to_assign) < 1
+
+        completed_at_row = conn.execute(
+            "SELECT onboarding_completed_at FROM user_settings WHERE id = 1"
+        ).fetchone()
+        onboarding_completed_at = completed_at_row["onboarding_completed_at"] if completed_at_row else None
+
+    steps = [
+        {"step": 1, "key": "accounts", "title": "Add accounts", "done": has_accounts},
+        {"step": 2, "key": "targets", "title": "Set envelope targets", "done": has_targets},
+        {"step": 3, "key": "assignments", "title": "Assign money to envelopes", "done": any_assigned},
+        {"step": 4, "key": "rta_zero", "title": "RTA = zero", "done": all_assigned},
+    ]
+    completed_steps = sum(1 for s in steps if s["done"])
+    next_step = next((s for s in steps if not s["done"]), None)
+
+    return {
+        "is_complete": completed_steps == len(steps),
+        "completed_steps": completed_steps,
+        "total_steps": len(steps),
+        "steps": steps,
+        "next": next_step,
+        "ready_to_assign": ready_to_assign if has_accounts else None,
+        "onboarding_completed_at": onboarding_completed_at,
+    }
+
+
+def mark_onboarding_complete(username: str) -> dict:
+    with get_conn(username) as conn:
+        conn.execute(
+            "UPDATE user_settings SET onboarding_completed_at = datetime('now') WHERE id = 1"
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT onboarding_completed_at FROM user_settings WHERE id = 1"
+        ).fetchone()
+    return {"onboarding_completed_at": row["onboarding_completed_at"]}
+
+
+def _envelope_available(conn: sqlite3.Connection, envelope_id: int, period: str) -> float:
+    assigned_row = conn.execute(
+        "SELECT assigned, carryover FROM budget_periods WHERE envelope_id = ? AND period = ?",
+        (envelope_id, period),
+    ).fetchone()
+    assigned = assigned_row["assigned"] if assigned_row else 0
+    carryover = assigned_row["carryover"] if assigned_row else _compute_carryover(conn, envelope_id, period)
+
+    activity = conn.execute(
+        """SELECT COALESCE(SUM(amount), 0) AS activity
+           FROM transactions
+           WHERE envelope_id = ? AND type = 'expense' AND strftime('%Y-%m', date) = ?""",
+        (envelope_id, period),
+    ).fetchone()["activity"]
+    return assigned + carryover - activity
+
+
+def get_setup_progress(username: str) -> dict:
+    status = get_onboarding_status(username)
+    return {
+        "wizard": {
+            "completed": status["is_complete"],
+            "completed_steps": status["completed_steps"],
+            "total_steps": status["total_steps"],
+            "next_step": status["next"],
+            "completed_at": status["onboarding_completed_at"],
+        }
+    }
+
+
+def get_accounts(username: str) -> dict:
+    with get_conn(username) as conn:
+        rows = conn.execute(
+            "SELECT id, name, type, balance FROM accounts ORDER BY type, name"
+        ).fetchall()
+    accounts = [dict(r) for r in rows]
+    total = sum(r["balance"] for r in accounts)
+    return {"accounts": accounts, "total": total}
 
 
 def edit_account(username: str, account_id: int, name: str, type_: str) -> dict:
@@ -436,6 +536,22 @@ def add_envelope(
             (cur.lastrowid,),
         ).fetchone()
     return dict(row)
+
+
+def clear_onboarding_complete(username: str) -> None:
+    with get_conn(username) as conn:
+        conn.execute("UPDATE user_settings SET onboarding_completed_at = NULL WHERE id = 1")
+        conn.commit()
+
+
+def maybe_sync_onboarding_completion(username: str) -> dict:
+    status = get_onboarding_status(username)
+    if status["is_complete"] and not status["onboarding_completed_at"]:
+        return mark_onboarding_complete(username)
+    if (not status["is_complete"]) and status["onboarding_completed_at"]:
+        clear_onboarding_complete(username)
+        return {"onboarding_completed_at": None}
+    return {"onboarding_completed_at": status["onboarding_completed_at"]}
 
 
 def edit_wishlist_item(

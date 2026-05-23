@@ -14,6 +14,8 @@ from envel_platform.db import (
     reorder_envelopes,
     set_envelope_target,
     unarchive_envelope,
+    get_setup_progress,
+    maybe_sync_onboarding_completion,
 )
 
 router = APIRouter()
@@ -71,7 +73,9 @@ async def create_envelope(
     body: EnvelopeCreate,
     username: str = Depends(require_user),
 ):
-    return add_envelope(username, body.name, body.icon or "📦", body.type, body.group_id)
+    envelope = add_envelope(username, body.name, body.icon or "📦", body.type, body.group_id)
+    maybe_sync_onboarding_completion(username)
+    return {**envelope, **get_setup_progress(username)}
 
 
 @router.patch("/reorder")
@@ -102,7 +106,8 @@ async def update_target(
         username, envelope_id,
         body.target_type, body.target_amount, body.target_deadline,
     )
-    return {"ok": True}
+    maybe_sync_onboarding_completion(username)
+    return {"ok": True, **get_setup_progress(username)}
 
 
 @router.patch("/{envelope_id}/assign")
@@ -113,7 +118,8 @@ async def assign(
     username: str = Depends(require_user),
 ):
     assign_envelope(username, envelope_id, period, body.assigned)
-    return {"ok": True}
+    maybe_sync_onboarding_completion(username)
+    return {"ok": True, **get_setup_progress(username)}
 
 
 @router.post("/{envelope_id}/archive")

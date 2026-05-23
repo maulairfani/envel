@@ -8,6 +8,8 @@ from envel_platform.db import (
     update_account_balance,
     delete_account,
     get_account_transactions,
+    get_setup_progress,
+    maybe_sync_onboarding_completion,
 )
 from pydantic import BaseModel
 
@@ -36,7 +38,9 @@ async def accounts(username: str = Depends(require_user)):
 
 @router.post("", status_code=201)
 async def create_account(body: AccountCreate, username: str = Depends(require_user)):
-    return add_account(username, body.name, body.type, body.balance)
+    account = add_account(username, body.name, body.type, body.balance)
+    maybe_sync_onboarding_completion(username)
+    return {**account, **get_setup_progress(username)}
 
 
 @router.patch("/{account_id}")
