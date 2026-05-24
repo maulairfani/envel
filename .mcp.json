@@ -6,6 +6,10 @@
       "headers": {
         "Authorization": "Bearer dev-token"
       }
+    },
+    "fastmcp-docs": {
+      "type": "http",
+      "url": "https://gofastmcp.com/mcp"
     }
   }
 }
