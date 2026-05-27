@@ -1,0 +1,43 @@
+services:
+  auth-server:
+    build: .
+    container_name: envel-auth-new
+    ports:
+      - "9000:9000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-envel}:${POSTGRES_PASSWORD:-envel}@postgres-auth:5432/${POSTGRES_DB:-envel_auth}
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+    networks:
+      - envel
+    restart: unless-stopped
+
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: envel-postgres-auth
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-envel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-envel}
+      POSTGRES_DB: ${POSTGRES_DB:-envel_auth}
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-envel} -d ${POSTGRES_DB:-envel_auth}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - envel
+    restart: unless-stopped
+
+volumes:
+  auth-pg-data:
+
+networks:
+  envel:
+    name: envel

@@ -1,2 +1,6 @@
 fastmcp[apps]
 sqlalchemy
+pydantic-settings
+python-dotenv
+psycopg[binary]
+alembic

@@ -28,3 +28,4 @@ DEPLOY.md
 # Claude Code local settings
 .claude/
 /.playwright-mcp
+/miss

@@ -1,5 +1,12 @@
-starlette
-uvicorn
+fastapi
+uvicorn[standard]
+pydantic-settings
+python-multipart
 bcrypt
 pyjwt
 python-dotenv
+psycopg[binary]
+sqlalchemy
+alembic
+cryptography
+httpx
