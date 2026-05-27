@@ -11,6 +11,10 @@ services:
     depends_on:
       postgres-managed:
         condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/src"]
     networks:
       - envel
     restart: unless-stopped
@@ -40,4 +44,4 @@ volumes:
 
 networks:
   envel:
-    external: true
+    name: envel

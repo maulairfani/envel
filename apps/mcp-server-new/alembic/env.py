@@ -59,7 +59,6 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        # Set search_path supaya CREATE TABLE masuk ke schema target
         connection.execute(text(f'SET search_path TO "{schema}"'))
         context.configure(
             connection=connection,
@@ -69,6 +68,7 @@ def run_migrations_online() -> None:
         )
         with context.begin_transaction():
             context.run_migrations()
+        connection.commit()  # paksa commit kalau auto-commit di alembic ga jalan
 
 
 if context.is_offline_mode():

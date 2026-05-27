@@ -6,6 +6,7 @@ bcrypt
 pyjwt
 python-dotenv
 psycopg[binary]
+psycopg2-binary
 sqlalchemy
 alembic
 cryptography

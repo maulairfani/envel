@@ -3,4 +3,7 @@ sqlalchemy
 pydantic-settings
 python-dotenv
 psycopg[binary]
+psycopg2-binary
 alembic
+sqlparse
+httpx
