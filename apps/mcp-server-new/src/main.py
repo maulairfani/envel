@@ -3,6 +3,7 @@ from pathlib import Path
 from fastmcp import FastMCP
 from fastmcp.server.providers import FileSystemProvider
 
+from .apps import register_apps
 from .auth import auth
 from .routes import register_routes
 
@@ -14,5 +15,6 @@ mcp = FastMCP(
     providers=[FileSystemProvider(COMPONENTS_DIR)],
 )
 register_routes(mcp)
+register_apps(mcp)
 
 app = mcp.http_app()

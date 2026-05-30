@@ -1,4 +1,7 @@
 fastmcp[apps]
+# Prefab powers the interactive apps (src/apps/). It ships frequent breaking
+# changes and fastmcp does not pin an upper bound — pin it explicitly here.
+prefab-ui==0.19.2
 sqlalchemy
 pydantic-settings
 python-dotenv
