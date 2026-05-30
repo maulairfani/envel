@@ -1,5 +1,5 @@
 name: envel
 
 include:
-  - ./apps/auth-server-new/docker-compose.yml
-  - ./apps/mcp-server-new/docker-compose.yml
+  - ./apps/auth-server/docker-compose.yml
+  - ./apps/mcp-server/docker-compose.yml
