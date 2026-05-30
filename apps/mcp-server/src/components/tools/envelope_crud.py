@@ -15,7 +15,10 @@ from src.models import Envelope
 
 
 TargetType = Literal[
-    "monthly_spending", "monthly_savings", "savings_balance", "needed_by_date"
+    "spend_monthly",  # belanja sampai X/bulan, refill ke target (sisa ngegulung)
+    "save_monthly",   # sisihkan X tiap bulan, numpuk tanpa akhir
+    "save_total",     # kumpulkan sampai X total, tanpa tanggal
+    "save_by_date",   # kumpulkan X sebelum target_date
 ]
 
 
