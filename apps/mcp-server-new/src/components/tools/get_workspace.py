@@ -71,6 +71,135 @@ def _available_at(
     )
 
 
+def resolve_period(period: str | None) -> str:
+    if period is not None and not PERIOD_RE.match(period):
+        raise ValueError(f"period must match YYYY-MM, got: {period!r}")
+    return period or _current_period()
+
+
+def build_workspace(session, target: str) -> dict[str, Any]:
+    """Hitung snapshot workspace (akun+balance, envelope+available, RTA).
+
+    Dipisah dari tool agar bisa dipakai ulang oleh app UI (envelopes snapshot).
+    """
+    accounts = (
+        session.execute(select(Account).order_by(Account.id)).scalars().all()
+    )
+    groups = (
+        session.execute(
+            select(EnvelopeGroup).order_by(EnvelopeGroup.sort_order, EnvelopeGroup.id)
+        )
+        .scalars()
+        .all()
+    )
+    envelopes = (
+        session.execute(select(Envelope).order_by(Envelope.id)).scalars().all()
+    )
+
+    # ── Saldo per akun: agregat amount per (account_id, type) + transfer masuk ──
+    bal_rows = session.execute(
+        select(
+            Transaction.account_id,
+            Transaction.type,
+            func.coalesce(func.sum(Transaction.amount), 0),
+        ).group_by(Transaction.account_id, Transaction.type)
+    ).all()
+    transfer_in_rows = session.execute(
+        select(
+            Transaction.transfer_account_id,
+            func.coalesce(func.sum(Transaction.amount), 0),
+        )
+        .where(
+            Transaction.type == "transfer",
+            Transaction.transfer_account_id.is_not(None),
+        )
+        .group_by(Transaction.transfer_account_id)
+    ).all()
+
+    balance: dict[int, int] = {a.id: 0 for a in accounts}
+    for acct_id, t_type, total in bal_rows:
+        if acct_id is None:
+            continue
+        if t_type == "income":
+            balance[acct_id] = balance.get(acct_id, 0) + total
+        elif t_type in ("expense", "transfer"):
+            balance[acct_id] = balance.get(acct_id, 0) - total
+    for acct_id, total in transfer_in_rows:
+        balance[acct_id] = balance.get(acct_id, 0) + total
+
+    total_balance = sum(balance.values())
+
+    # ── assigned per (envelope, period) dari plans ──
+    plan_rows = session.execute(
+        select(Plan.envelope_id, Plan.period, Plan.assigned)
+    ).all()
+    assigned_map: dict[int, dict[str, int]] = {}
+    for env_id, p, amt in plan_rows:
+        assigned_map.setdefault(env_id, {})[p] = amt
+
+    # ── activity (expense) per (envelope, period) ──
+    period_expr = func.to_char(Transaction.date, "YYYY-MM")
+    act_rows = session.execute(
+        select(
+            Transaction.envelope_id,
+            period_expr,
+            func.coalesce(func.sum(Transaction.amount), 0),
+        )
+        .where(
+            Transaction.type == "expense",
+            Transaction.envelope_id.is_not(None),
+        )
+        .group_by(Transaction.envelope_id, period_expr)
+    ).all()
+    activity_map: dict[int, dict[str, int]] = {}
+    for env_id, p, amt in act_rows:
+        activity_map.setdefault(env_id, {})[p] = amt
+
+    # ── available per envelope pada target period ──
+    envelope_out = []
+    total_available = 0
+    for e in envelopes:
+        assigned, activity, available = _available_at(
+            assigned_map.get(e.id, {}), activity_map.get(e.id, {}), target
+        )
+        total_available += available
+        envelope_out.append(
+            {
+                "id": e.id,
+                "name": e.name,
+                "group_id": e.group_id,
+                "target_type": e.target_type,
+                "target_amount": e.target_amount,
+                "target_date": e.target_date.isoformat() if e.target_date else None,
+                "assigned": assigned,
+                "activity": activity,
+                "available": available,
+            }
+        )
+
+    ready_to_assign = total_balance - total_available
+
+    return {
+        "period": target,
+        "accounts": [
+            {"id": a.id, "name": a.name, "type": a.type, "balance": balance[a.id]}
+            for a in accounts
+        ],
+        "envelope_groups": [
+            {"id": g.id, "name": g.name, "sort_order": g.sort_order} for g in groups
+        ],
+        "envelopes": envelope_out,
+        "summary": {
+            "total_balance": total_balance,
+            "total_available": total_available,
+            "ready_to_assign": ready_to_assign,
+            "is_balanced": abs(ready_to_assign) < 1,
+            "is_overspent": ready_to_assign < -1,
+        },
+        "ready_to_assign": ready_to_assign,
+    }
+
+
 @tool
 def get_workspace(
     period: Annotated[
@@ -79,130 +208,7 @@ def get_workspace(
     ] = None,
 ) -> dict[str, Any]:
     """Get accounts, envelopes, groups, balances, and ready-to-assign."""
-    if period is not None and not PERIOD_RE.match(period):
-        raise ValueError(f"period must match YYYY-MM, got: {period!r}")
-    target = period or _current_period()
-
+    target = resolve_period(period)
     user = current_user()
     with user_session(user.db_url) as session:
-        accounts = (
-            session.execute(select(Account).order_by(Account.id)).scalars().all()
-        )
-        groups = (
-            session.execute(
-                select(EnvelopeGroup).order_by(
-                    EnvelopeGroup.sort_order, EnvelopeGroup.id
-                )
-            )
-            .scalars()
-            .all()
-        )
-        envelopes = (
-            session.execute(select(Envelope).order_by(Envelope.id)).scalars().all()
-        )
-
-        # ── Saldo per akun: agregat amount per (account_id, type) + transfer masuk ──
-        bal_rows = session.execute(
-            select(
-                Transaction.account_id,
-                Transaction.type,
-                func.coalesce(func.sum(Transaction.amount), 0),
-            ).group_by(Transaction.account_id, Transaction.type)
-        ).all()
-        transfer_in_rows = session.execute(
-            select(
-                Transaction.transfer_account_id,
-                func.coalesce(func.sum(Transaction.amount), 0),
-            )
-            .where(
-                Transaction.type == "transfer",
-                Transaction.transfer_account_id.is_not(None),
-            )
-            .group_by(Transaction.transfer_account_id)
-        ).all()
-
-        balance: dict[int, int] = {a.id: 0 for a in accounts}
-        for acct_id, t_type, total in bal_rows:
-            if acct_id is None:
-                continue
-            if t_type == "income":
-                balance[acct_id] = balance.get(acct_id, 0) + total
-            elif t_type in ("expense", "transfer"):
-                balance[acct_id] = balance.get(acct_id, 0) - total
-        for acct_id, total in transfer_in_rows:
-            balance[acct_id] = balance.get(acct_id, 0) + total
-
-        total_balance = sum(balance.values())
-
-        # ── assigned per (envelope, period) dari plans ──
-        plan_rows = session.execute(
-            select(Plan.envelope_id, Plan.period, Plan.assigned)
-        ).all()
-        assigned_map: dict[int, dict[str, int]] = {}
-        for env_id, p, amt in plan_rows:
-            assigned_map.setdefault(env_id, {})[p] = amt
-
-        # ── activity (expense) per (envelope, period) ──
-        period_expr = func.to_char(Transaction.date, "YYYY-MM")
-        act_rows = session.execute(
-            select(
-                Transaction.envelope_id,
-                period_expr,
-                func.coalesce(func.sum(Transaction.amount), 0),
-            )
-            .where(
-                Transaction.type == "expense",
-                Transaction.envelope_id.is_not(None),
-            )
-            .group_by(Transaction.envelope_id, period_expr)
-        ).all()
-        activity_map: dict[int, dict[str, int]] = {}
-        for env_id, p, amt in act_rows:
-            activity_map.setdefault(env_id, {})[p] = amt
-
-        # ── available per envelope pada target period ──
-        envelope_out = []
-        total_available = 0
-        for e in envelopes:
-            assigned, activity, available = _available_at(
-                assigned_map.get(e.id, {}), activity_map.get(e.id, {}), target
-            )
-            total_available += available
-            envelope_out.append(
-                {
-                    "id": e.id,
-                    "name": e.name,
-                    "group_id": e.group_id,
-                    "target_type": e.target_type,
-                    "target_amount": e.target_amount,
-                    "target_date": e.target_date.isoformat()
-                    if e.target_date
-                    else None,
-                    "assigned": assigned,
-                    "activity": activity,
-                    "available": available,
-                }
-            )
-
-        ready_to_assign = total_balance - total_available
-
-        return {
-            "period": target,
-            "accounts": [
-                {"id": a.id, "name": a.name, "type": a.type, "balance": balance[a.id]}
-                for a in accounts
-            ],
-            "envelope_groups": [
-                {"id": g.id, "name": g.name, "sort_order": g.sort_order}
-                for g in groups
-            ],
-            "envelopes": envelope_out,
-            "summary": {
-                "total_balance": total_balance,
-                "total_available": total_available,
-                "ready_to_assign": ready_to_assign,
-                "is_balanced": abs(ready_to_assign) < 1,
-                "is_overspent": ready_to_assign < -1,
-            },
-            "ready_to_assign": ready_to_assign,
-        }
+        return build_workspace(session, target)

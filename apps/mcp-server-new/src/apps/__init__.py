@@ -13,9 +13,10 @@ Tambah app baru:
 
 from fastmcp import FastMCP
 
-from . import transactions
+from . import envelopes, transactions
 
 
 def register_apps(mcp: FastMCP) -> None:
     """Daftarkan semua interactive app ke instance FastMCP."""
     transactions.register(mcp)
+    envelopes.register(mcp)

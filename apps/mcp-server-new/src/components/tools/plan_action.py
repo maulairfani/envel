@@ -1,7 +1,9 @@
 """
 Plan / budget action — assign budget atau move money antar envelope.
 
-`assign`: set absolute `plans.assigned` untuk envelope di period.
+`assign`: ubah `plans.assigned` untuk envelope di period.
+  - mode="set" (default): set ke nilai absolut.
+  - mode="add": tambah delta ke nilai sekarang; amount boleh negatif (= kurangi).
 `move`: kurangi dari satu envelope, tambah ke envelope lain (atomik).
 
 Semua operations dalam 1 DB transaction.
@@ -34,7 +36,8 @@ class AssignOp(BaseModel):
     op: Literal["assign"]
     envelope_id: int
     period: str  # YYYY-MM
-    amount: int  # absolute (replace, bukan add)
+    amount: int  # mode=set: nilai absolut; mode=add: delta (boleh negatif = kurangi)
+    mode: Literal["set", "add"] = "set"
 
     @field_validator("period")
     @classmethod
@@ -60,7 +63,7 @@ PlanOp = Annotated[Union[AssignOp, MoveOp], Field(discriminator="op")]
 
 @tool
 def plan_action(operations: list[PlanOp]) -> dict[str, Any]:
-    """Assign budget or move money between envelopes atomically."""
+    """Assign budget (mode 'set'=absolute, 'add'=delta; negative add subtracts) or move money between envelopes atomically."""
     if not operations:
         raise ValueError("operations cannot be empty")
 
@@ -71,7 +74,10 @@ def plan_action(operations: list[PlanOp]) -> dict[str, Any]:
         for op in operations:
             if isinstance(op, AssignOp):
                 plan = _upsert_plan(session, op.envelope_id, op.period)
-                plan.assigned = op.amount
+                if op.mode == "add":
+                    plan.assigned += op.amount  # amount negatif = kurangi
+                else:
+                    plan.assigned = op.amount
                 affected[(plan.envelope_id, plan.period)] = plan
             else:  # MoveOp
                 if op.from_envelope_id == op.to_envelope_id:
