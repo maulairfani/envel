@@ -7,7 +7,7 @@ server setelah render). Untuk query terprogram / filter granular, pakai tool
 `read_transactions`.
 
 Styling: pakai theme Presentation (Inter + angka tabular + baris lebih tinggi,
-cocok untuk tabel data fokus) dengan accent emerald. Warna amount & badge tipe
+cocok untuk tabel data fokus). Warna amount & badge tipe
 pakai semantic token (text-success/text-destructive, variant success/
 destructive) supaya ikut theme + dark mode. Catatan: kolom yang berisi
 komponen (type badge, amount berwarna) TIDAK di-sort — sorting di cell komponen
@@ -109,17 +109,17 @@ def register(mcp: FastMCP) -> None:
                         if t.envelope_id is not None
                         else ""
                     ),
-                    "memo": t.memo or "",
                 }
                 for t in txns
             ]
 
-        with PrefabApp(theme=Presentation(accent="emerald")) as app:
-            with Column(gap=4, css_class="p-6"):
+        with PrefabApp(theme=Presentation()) as app:
+            with Column(gap=4, css_class="p-6 w-full"):
                 H2("Transactions")
                 Muted(f"{len(rows)} most recent")
                 if rows:
                     DataTable(
+                        css_class="w-full",
                         columns=[
                             DataTableColumn(key="date", header="Date", sortable=True),
                             DataTableColumn(key="type", header="Type"),
@@ -128,15 +128,13 @@ def register(mcp: FastMCP) -> None:
                                 key="amount", header="Amount", align="right"
                             ),
                             DataTableColumn(
-                                key="account", header="Account", sortable=True
-                            ),
-                            DataTableColumn(
                                 key="envelope", header="Envelope", sortable=True
                             ),
-                            DataTableColumn(key="memo", header="Memo"),
                         ],
                         rows=rows,
                         search=True,
+                        paginated=True,
+                        page_size=8,
                     )
                 else:
                     Muted("No transactions yet.")

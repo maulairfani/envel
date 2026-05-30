@@ -37,6 +37,7 @@ class Envelope(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
+    icon: Mapped[str | None]  # nama lucide kebab-case (mis. "utensils"); lucide.dev/icons
     group_id: Mapped[int | None] = mapped_column(ForeignKey("envelope_groups.id"))
     target_type: Mapped[str | None]
     # monthly_spending | monthly_savings | savings_balance | needed_by_date

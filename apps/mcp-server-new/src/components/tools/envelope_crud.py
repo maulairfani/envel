@@ -22,6 +22,10 @@ TargetType = Literal[
 class CreateEnvelopeOp(BaseModel):
     action: Literal["create"]
     name: str
+    icon: str | None = Field(
+        default=None,
+        description="Lucide icon name, kebab-case (e.g. 'utensils', 'car', 'home'). See lucide.dev/icons.",
+    )
     group_id: int | None = None
     target_type: TargetType | None = None
     target_amount: int | None = None
@@ -32,6 +36,10 @@ class UpdateEnvelopeOp(BaseModel):
     action: Literal["update"]
     id: int
     name: str | None = None
+    icon: str | None = Field(
+        default=None,
+        description="Lucide icon name, kebab-case (e.g. 'utensils', 'car', 'home'). See lucide.dev/icons.",
+    )
     group_id: int | None = None
     target_type: TargetType | None = None
     target_amount: int | None = None
@@ -57,6 +65,7 @@ def envelope_crud(payload: EnvelopeOp) -> dict[str, Any]:
         if isinstance(payload, CreateEnvelopeOp):
             envelope = Envelope(
                 name=payload.name,
+                icon=payload.icon,
                 group_id=payload.group_id,
                 target_type=payload.target_type,
                 target_amount=payload.target_amount,
@@ -89,6 +98,7 @@ def _envelope_dict(e: Envelope) -> dict[str, Any]:
     return {
         "id": e.id,
         "name": e.name,
+        "icon": e.icon,
         "group_id": e.group_id,
         "target_type": e.target_type,
         "target_amount": e.target_amount,

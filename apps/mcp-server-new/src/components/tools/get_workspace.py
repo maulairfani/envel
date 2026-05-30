@@ -167,6 +167,7 @@ def build_workspace(session, target: str) -> dict[str, Any]:
             {
                 "id": e.id,
                 "name": e.name,
+                "icon": e.icon,
                 "group_id": e.group_id,
                 "target_type": e.target_type,
                 "target_amount": e.target_amount,
