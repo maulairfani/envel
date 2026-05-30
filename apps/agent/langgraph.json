@@ -1,0 +1,11 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "envel": "./envel_agent/agent.py:make_graph"
+  },
+  "env": "./.env",
+  "auth": {
+    "path": "./envel_agent/auth.py:auth"
+  },
+  "python_version": "3.12"
+}

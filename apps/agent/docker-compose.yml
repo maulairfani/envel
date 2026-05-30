@@ -1,0 +1,76 @@
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: envel-agent
+    ports:
+      - "8002:8000"
+    env_file:
+      - .env
+    environment:
+      # internal network — override the localhost dev value in .env
+      MCP_URL: http://mcp-server:8000/mcp
+      REDIS_URI: redis://agent-redis:6379
+      POSTGRES_URI: postgres://postgres:postgres@agent-postgres:5432/postgres?sslmode=disable
+      # canonical envel skill(s) mounted read-only (see volumes); not baked into
+      # the image since they live at repo-root, outside this build context
+      ENVEL_SKILLS_DIR: /skills
+    volumes:
+      - ../../skills:/skills:ro
+    depends_on:
+      agent-redis:
+        condition: service_healthy
+      agent-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/ok')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - envel
+    restart: unless-stopped
+
+  agent-redis:
+    image: redis:6
+    container_name: envel-agent-redis
+    healthcheck:
+      test: redis-cli ping
+      interval: 5s
+      timeout: 1s
+      retries: 5
+    networks:
+      - envel
+    restart: unless-stopped
+
+  agent-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: envel-agent-postgres
+    # 5433 is taken by envel-postgres-managed; expose on 5434 for local debugging
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    command: ["postgres", "-c", "shared_preload_libraries=vector"]
+    volumes:
+      - agent-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U postgres
+      start_period: 10s
+      timeout: 1s
+      retries: 5
+      interval: 5s
+    networks:
+      - envel
+    restart: unless-stopped
+
+volumes:
+  agent-pg-data:
+
+networks:
+  envel:
+    name: envel

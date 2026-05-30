@@ -3,3 +3,4 @@ name: envel
 include:
   - ./apps/auth-server/docker-compose.yml
   - ./apps/mcp-server/docker-compose.yml
+  - ./apps/agent/docker-compose.yml
