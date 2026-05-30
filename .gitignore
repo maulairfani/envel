@@ -25,7 +25,11 @@ apps/*/*.egg-info/
 PLAN.md
 DEPLOY.md
 
-# Claude Code local settings
-.claude/
+# Claude Code — track shared config (settings.json) & skills (.agents/),
+# tapi abaikan yang personal/scratch/non-portabel:
+.claude/settings.local.json
+.claude/worktrees/
+.claude/skills/
+.agents/state/
 /.playwright-mcp
 /miss
