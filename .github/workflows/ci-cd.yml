@@ -25,8 +25,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - { image: envel-mcp,   context: apps/mcp-server }
-          - { image: envel-auth,  context: apps/auth-server }
+          - { image: envel-mcp, context: apps/mcp-server }
+          - { image: envel-auth, context: apps/auth-server }
           - { image: envel-agent, context: apps/agent }
     steps:
       - uses: actions/checkout@v4

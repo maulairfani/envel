@@ -5,7 +5,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     jwt_secret: str
-    auth_base_url: str
+    auth_base_url: str  # INTERNAL — for /internal/db-url calls (e.g. http://auth-server:9000)
+    auth_public_url: str = "http://localhost:9000"  # PUBLIC — advertised in OAuth metadata to external MCP clients
     mcp_base_url: str
     internal_api_key: str  # shared secret untuk endpoint /internal/*
 

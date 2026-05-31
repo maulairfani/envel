@@ -29,6 +29,9 @@ until docker exec envel-postgres-managed pg_isready -U "${PG_USER}" -d "${PG_DB}
   sleep 1
 done
 
+echo ">> Migrating auth DB"
+$COMPOSE run --rm auth-server alembic upgrade head
+
 echo ">> Migrating MCP schema for each user"
 schemas=$(docker exec envel-postgres-managed psql -U "${PG_USER}" -d "${PG_DB}" -tAc \
   "SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'user\\_%'")
@@ -44,13 +47,17 @@ fi
 echo ">> Starting all services"
 $COMPOSE up -d --no-build --remove-orphans
 
-echo ">> Health check"
-sleep 5
+echo ">> Health check (wait for agent /ok — LangGraph takes ~20-30s to start)"
 $COMPOSE ps
-if curl -fsS http://localhost:8002/ok >/dev/null; then
+ok=
+for i in $(seq 1 40); do
+  if curl -fsS http://localhost:8002/ok >/dev/null 2>&1; then ok=1; break; fi
+  sleep 3
+done
+if [ -n "$ok" ]; then
   echo "   agent /ok OK"
 else
-  echo "   agent health FAILED" >&2
+  echo "   agent health FAILED after ~120s" >&2
   exit 1
 fi
 
