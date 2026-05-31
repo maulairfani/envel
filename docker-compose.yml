@@ -1,6 +1,11 @@
 name: envel
 
+# Each app is self-contained: its own .env is the interpolation source for its
+# compose file (so POSTGRES_* etc. live in that app's .env, not a root .env).
 include:
-  - ./apps/auth-server/docker-compose.yml
-  - ./apps/mcp-server/docker-compose.yml
-  - ./apps/agent/docker-compose.yml
+  - path: ./apps/auth-server/docker-compose.yml
+    env_file: ./apps/auth-server/.env
+  - path: ./apps/mcp-server/docker-compose.yml
+    env_file: ./apps/mcp-server/.env
+  - path: ./apps/agent/docker-compose.yml
+    env_file: ./apps/agent/.env

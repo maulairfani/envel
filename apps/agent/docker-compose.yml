@@ -1,5 +1,6 @@
 services:
   agent:
+    image: ghcr.io/maulairfani/envel-agent:${ENVEL_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -12,7 +13,7 @@ services:
       # internal network — override the localhost dev value in .env
       MCP_URL: http://mcp-server:8000/mcp
       REDIS_URI: redis://agent-redis:6379
-      POSTGRES_URI: postgres://postgres:postgres@agent-postgres:5432/postgres?sslmode=disable
+      POSTGRES_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@agent-postgres:5432/${POSTGRES_DB}?sslmode=disable
       # canonical envel skill(s) mounted read-only (see volumes); not baked into
       # the image since they live at repo-root, outside this build context
       ENVEL_SKILLS_DIR: /skills
@@ -52,14 +53,14 @@ services:
     ports:
       - "5434:5432"
     environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     command: ["postgres", "-c", "shared_preload_libraries=vector"]
     volumes:
       - agent-pg-data:/var/lib/postgresql/data
     healthcheck:
-      test: pg_isready -U postgres
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       start_period: 10s
       timeout: 1s
       retries: 5

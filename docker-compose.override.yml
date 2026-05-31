@@ -1,0 +1,15 @@
+# Local-dev overrides — auto-applied by a bare `docker compose` in this dir.
+# The VM deploy runs `docker compose -f docker-compose.yml` (see scripts/deploy.sh),
+# which ignores this file, so production never gets source mounts or --reload.
+services:
+  mcp-server:
+    volumes:
+      - ./apps/mcp-server/src:/app/src
+      - ./apps/mcp-server/alembic:/app/alembic
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/src"]
+
+  auth-server:
+    volumes:
+      - ./apps/auth-server/src:/app/src
+      - ./apps/auth-server/alembic:/app/alembic
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "9000", "--reload", "--reload-dir", "/app/src"]

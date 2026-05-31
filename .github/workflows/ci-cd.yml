@@ -9,51 +9,53 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  REGISTRY: ghcr.io
+  OWNER: maulairfani
+
 jobs:
-  build-frontend:
-    name: Build frontends
+  # Build every service image. On PRs this just validates the builds; on a push
+  # to main it also pushes to GHCR tagged with the commit SHA (+ latest).
+  build:
+    name: Build & push images
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
-        app: [apps/platform/web, apps/marketing]
+        include:
+          - { image: envel-mcp,   context: apps/mcp-server }
+          - { image: envel-auth,  context: apps/auth-server }
+          - { image: envel-agent, context: apps/agent }
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: ${{ matrix.app }}/package-lock.json
-      - run: npm ci
-        working-directory: ${{ matrix.app }}
-      - run: npm run build
-        working-directory: ${{ matrix.app }}
 
-  check-python:
-    name: Check Python apps
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-      - name: Install apps
-        run: |
-          pip install -e apps/mcp-server
-          pip install -e apps/auth-server
-          pip install -e apps/platform/server
-      - name: Import smoke test
-        env:
-          USERS_DB: /tmp/ci-users.db
-          SESSION_SECRET: ci-dummy-session-secret-for-import-smoke-test
-        run: |
-          python -c "import envel_mcp.server"
-          python -c "import envel_auth.server"
-          python -c "import envel_platform.server"
+      - uses: docker/setup-buildx-action@v3
 
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (push on main)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.image }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Pull the freshly built images on the VM and (re)start the stack.
   deploy:
-    name: Deploy to VPS
-    needs: [build-frontend, check-python]
+    name: Deploy to VM
+    needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     concurrency:
@@ -65,18 +67,13 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy
           chmod 600 ~/.ssh/deploy
-          ssh-keyscan -H envel.dev >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H "${{ secrets.VM_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
       - name: Deploy
         run: |
-          ssh -i ~/.ssh/deploy irfani@envel.dev 'bash -s' <<'EOF'
-            set -euo pipefail
-            cd /home/irfani/apps/envel-mcp
-            git fetch --prune origin main
-            git reset --hard origin/main
-            (cd apps/platform/web && npm ci && npm run build)
-            (cd apps/marketing && npm ci && npm run build)
-            sudo cp -r apps/marketing/dist/. /var/www/envel.dev/
-            sudo systemctl restart envel-auth envel-mcp envel-platform
-            sleep 2
-            sudo systemctl is-active envel-auth envel-mcp envel-platform
-          EOF
+          ssh -i ~/.ssh/deploy "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" \
+            "export ENVEL_TAG='${{ github.sha }}'; \
+             cd '${{ secrets.VM_REPO_DIR }}' && \
+             git fetch --prune origin main && \
+             git reset --hard origin/main && \
+             bash scripts/deploy.sh"

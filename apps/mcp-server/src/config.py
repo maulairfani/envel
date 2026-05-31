@@ -7,8 +7,22 @@ class Settings(BaseSettings):
     jwt_secret: str
     auth_base_url: str
     mcp_base_url: str
-    managed_database_url: str
     internal_api_key: str  # shared secret untuk endpoint /internal/*
+
+    # Managed Postgres — the connection URL is derived from these parts, so the
+    # full URL is never an env var nor injected by docker-compose.
+    postgres_user: str
+    postgres_password: str
+    postgres_db: str
+    postgres_host: str = "postgres-managed"
+    postgres_port: int = 5432
+
+    @property
+    def managed_database_url(self) -> str:
+        return (
+            f"postgresql://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
 
 
 settings = Settings()

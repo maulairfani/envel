@@ -1,20 +1,16 @@
 services:
   mcp-server:
+    image: ghcr.io/maulairfani/envel-mcp:${ENVEL_TAG:-latest}
     build: .
     container_name: envel-mcp
     ports:
       - "8001:8000"
     env_file:
       - .env
-    environment:
-      MANAGED_DATABASE_URL: postgresql://${POSTGRES_USER:-envel}:${POSTGRES_PASSWORD:-envel}@postgres-managed:5432/${POSTGRES_DB:-envel_managed}
     depends_on:
       postgres-managed:
         condition: service_healthy
-    volumes:
-      - ./src:/app/src
-      - ./alembic:/app/alembic
-    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/src"]
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
     networks:
       - envel
     restart: unless-stopped
@@ -22,16 +18,14 @@ services:
   postgres-managed:
     image: postgres:16-alpine
     container_name: envel-postgres-managed
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-envel}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-envel}
-      POSTGRES_DB: ${POSTGRES_DB:-envel_managed}
+    env_file:
+      - .env
     ports:
       - "5433:5432"
     volumes:
       - managed-pg-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-envel} -d ${POSTGRES_DB:-envel_managed}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5

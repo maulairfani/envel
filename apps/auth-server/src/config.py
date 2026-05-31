@@ -6,7 +6,6 @@ class Settings(BaseSettings):
 
     jwt_secret: str
     auth_base_url: str = "http://localhost:9000"
-    database_url: str
     token_ttl: int = 3600
 
     # Fernet key untuk encrypt db_url di kolom users.db_url_encrypted
@@ -15,6 +14,20 @@ class Settings(BaseSettings):
     # MCP internal API
     mcp_internal_url: str  # e.g. http://mcp-server:8000
     internal_api_key: str  # shared secret antara auth ↔ mcp
+
+    # Auth Postgres — URL derived from these parts (no full-URL env var).
+    postgres_user: str
+    postgres_password: str
+    postgres_db: str
+    postgres_host: str = "postgres-auth"
+    postgres_port: int = 5432
+
+    @property
+    def database_url(self) -> str:
+        return (
+            f"postgresql://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
 
 
 settings = Settings()
