@@ -42,9 +42,9 @@ export function ChatView({ threadId, onThreadCreated }: ChatViewProps) {
         {empty ? (
           <div className="flex h-full items-center justify-center px-6 text-center">
             <div className="space-y-2">
-              <p className="text-lg font-semibold">Halo 👋</p>
+              <p className="text-lg font-semibold">Hello 👋</p>
               <p className="max-w-sm text-sm text-muted-foreground">
-                Mau atur budget, catat pengeluaran, atau lihat sisa amplop? Tanya aja.
+                Want to set a budget, log an expense, or check what's left in an envelope? Just ask.
               </p>
             </div>
           </div>
@@ -55,7 +55,7 @@ export function ChatView({ threadId, onThreadCreated }: ChatViewProps) {
             ))}
             {stream.error != null && (
               <p className="text-sm text-negative">
-                Terjadi kesalahan saat menghubungi agent. Coba lagi.
+                Something went wrong while reaching the agent. Please try again.
               </p>
             )}
             <div ref={bottomRef} />

@@ -2,8 +2,8 @@ import { Logo } from "@/components/brand/logo";
 import { Button, Input, Label } from "@/components/ui";
 
 const ERRORS: Record<string, string> = {
-  invalid: "Username atau password salah.",
-  unavailable: "Server auth tidak bisa dihubungi. Coba lagi nanti.",
+  invalid: "Wrong username or password.",
+  unavailable: "Can't reach the auth server. Please try again later.",
 };
 
 export default async function LoginPage({
@@ -22,15 +22,15 @@ export default async function LoginPage({
         className="w-full max-w-sm space-y-4"
       >
         <div className="space-y-1 text-center">
-          <h1 className="text-lg font-semibold">Masuk ke Envel</h1>
+          <h1 className="text-lg font-semibold">Sign in to Envel</h1>
           <p className="text-sm text-muted-foreground">
-            Kelola anggaran lewat percakapan.
+            Manage your budget through conversation.
           </p>
         </div>
 
         {error && (
           <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {ERRORS[error] ?? "Terjadi kesalahan saat login."}
+            {ERRORS[error] ?? "Something went wrong while signing in."}
           </p>
         )}
 
@@ -50,7 +50,7 @@ export default async function LoginPage({
         </div>
 
         <Button type="submit" className="w-full">
-          Masuk
+          Sign in
         </Button>
       </form>
     </main>

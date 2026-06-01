@@ -34,7 +34,7 @@ export default async function TransactionsPage({
   } catch {
     return (
       <PageView title="Transactions">
-        <p className="text-sm text-negative">Gagal memuat data dari server.</p>
+        <p className="text-sm text-negative">Failed to load data from the server.</p>
       </PageView>
     );
   }
@@ -58,11 +58,11 @@ export default async function TransactionsPage({
         </div>
         <div className="flex gap-6 text-right">
           <div>
-            <div className="text-xs text-muted-foreground">Masuk</div>
+            <div className="text-xs text-muted-foreground">In</div>
             <MoneyText amount={income} tone="positive" showSign className="text-lg" />
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">Keluar</div>
+            <div className="text-xs text-muted-foreground">Out</div>
             <MoneyText amount={-expense} tone="negative" className="text-lg" />
           </div>
         </div>
@@ -73,8 +73,8 @@ export default async function TransactionsPage({
       {page.transactions.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {filtered
-            ? "Tidak ada transaksi yang cocok dengan filter."
-            : "Belum ada transaksi pada periode ini."}
+            ? "No transactions match the filter."
+            : "No transactions yet for this period."}
         </p>
       ) : (
         <TransactionList

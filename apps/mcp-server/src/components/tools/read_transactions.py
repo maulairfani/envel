@@ -1,7 +1,7 @@
 """
-Read transactions dengan filter lengkap.
+Read transactions with full filtering.
 
-Default ordering: date DESC, id DESC (transaksi terbaru paling atas).
+Default ordering: date DESC, id DESC (most recent transactions on top).
 Default limit 100, max 1000.
 """
 
@@ -45,7 +45,7 @@ def read_transactions(
     if envelope_ids:
         conditions.append(Transaction.envelope_id.in_(envelope_ids))
     if account_id is not None:
-        # Match account_id ATAU transfer_account_id (untuk transfer)
+        # Match account_id OR transfer_account_id (for transfers)
         from sqlalchemy import or_
         conditions.append(
             or_(
@@ -82,7 +82,7 @@ def read_transactions(
             select(Transaction)
             .where(and_(*conditions) if conditions else True)
             .order_by(Transaction.date.desc(), Transaction.id.desc())
-            .limit(limit + 1)  # fetch +1 untuk deteksi has_more
+            .limit(limit + 1)  # fetch +1 to detect has_more
             .offset(offset)
         )
         rows = session.execute(stmt).scalars().all()

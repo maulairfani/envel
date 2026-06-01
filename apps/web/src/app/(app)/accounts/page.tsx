@@ -14,7 +14,7 @@ export default async function AccountsPage() {
   } catch {
     return (
       <PageView title="Accounts">
-        <p className="text-sm text-negative">Gagal memuat data dari server.</p>
+        <p className="text-sm text-negative">Failed to load data from the server.</p>
       </PageView>
     );
   }
@@ -24,7 +24,7 @@ export default async function AccountsPage() {
       title="Accounts"
       action={
         <div className="text-right">
-          <div className="text-xs text-muted-foreground">Total saldo</div>
+          <div className="text-xs text-muted-foreground">Total balance</div>
           <MoneyText amount={ws.summary.total_balance} tone="auto" className="text-lg" />
         </div>
       }

@@ -42,7 +42,7 @@ export function AppSidebar() {
       </div>
 
       <Button variant="outline" className="justify-start gap-2" onClick={newChat}>
-        <Plus /> Chat baru
+        <Plus /> New chat
       </Button>
 
       <nav className="mt-2 space-y-0.5">
@@ -67,7 +67,7 @@ export function AppSidebar() {
 
       <div className="mt-4 flex-1 overflow-y-auto">
         <p className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Riwayat
+          History
         </p>
         <div className="space-y-0.5">
           {threads.map((t) => {
@@ -93,7 +93,7 @@ export function AppSidebar() {
 
       <form action="/api/auth/logout" method="post">
         <Button type="submit" variant="ghost" className="w-full justify-start gap-2 text-muted-foreground">
-          <LogOut /> Keluar
+          <LogOut /> Sign out
         </Button>
       </form>
     </div>

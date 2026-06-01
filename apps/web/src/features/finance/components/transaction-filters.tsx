@@ -82,8 +82,8 @@ function MultiSelect({
     selected.length === 0
       ? allLabel
       : selected.length === 1
-        ? options.find((o) => o.id === selected[0])?.name ?? `${selected.length} dipilih`
-        : `${selected.length} dipilih`;
+        ? options.find((o) => o.id === selected[0])?.name ?? `${selected.length} selected`
+        : `${selected.length} selected`;
 
   return (
     <div ref={ref} className="relative">
@@ -231,7 +231,7 @@ export function TransactionFilters({ accounts, envelopes }: TransactionFiltersPr
 
       {open && (
         <div className="space-y-4 border-t border-border p-4">
-          <Field label="Tipe">
+          <Field label="Type">
             <div className="flex flex-wrap gap-2">
               {TX_TYPES.map((t) => (
                 <Chip key={t.value} active={types.includes(t.value)} onClick={() => toggleType(t.value)}>
@@ -241,10 +241,10 @@ export function TransactionFilters({ accounts, envelopes }: TransactionFiltersPr
             </div>
           </Field>
 
-          <Field label="Akun">
+          <Field label="Account">
             <MultiSelect
-              label="Akun"
-              allLabel="Semua akun"
+              label="Account"
+              allLabel="All accounts"
               options={accounts.map((a) => ({ id: a.id, name: a.name }))}
               selected={accountIds}
               onToggle={toggleAccount}
@@ -254,18 +254,18 @@ export function TransactionFilters({ accounts, envelopes }: TransactionFiltersPr
           <Field label="Envelope">
             <MultiSelect
               label="Envelope"
-              allLabel="Semua envelope"
+              allLabel="All envelopes"
               options={envelopes.map((e) => ({ id: e.id, name: e.name }))}
               selected={envelopeIds}
               onToggle={toggleEnvelope}
             />
           </Field>
 
-          <Field label="Cari payee / memo">
+          <Field label="Search payee / memo">
             <Input
               type="search"
-              aria-label="Cari payee atau memo"
-              placeholder="Cari payee atau memo…"
+              aria-label="Search payee or memo"
+              placeholder="Search payee or memo…"
               value={payee}
               onChange={(e) => setPayee(e.target.value)}
               className="h-9"

@@ -1,7 +1,7 @@
 """
 Ephemeral in-memory stores.
 
-Restart-safe by design: OAuth clients auto re-register, codes punya TTL 60 detik.
+Restart-safe by design: OAuth clients auto re-register, codes have a 60-second TTL.
 """
 
 clients: dict[str, dict] = {}  # client_id → {redirect_uris}

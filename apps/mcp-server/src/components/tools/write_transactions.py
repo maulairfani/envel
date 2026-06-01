@@ -1,13 +1,13 @@
 """
-Bulk write transactions — create/update/delete dalam 1 call, atomik per call.
+Bulk write transactions — create/update/delete in 1 call, atomic per call.
 
-Semua operasi dalam satu DB transaction: kalau ada satu yang gagal,
-keseluruhan rollback. Cocok untuk import dari struk (banyak baris sekaligus)
-atau koreksi multi-row.
+All operations in a single DB transaction: if any one fails,
+the whole thing rolls back. Suited for importing from receipts (many rows at once)
+or multi-row corrections.
 
-Untuk transfer, `amount` selalu positif. `account_id` adalah sumber,
-`transfer_account_id` adalah tujuan. Sign uang ditentukan oleh `type` saat
-dihitung balance.
+For transfers, `amount` is always positive. `account_id` is the source,
+`transfer_account_id` is the destination. The sign of money is determined by `type` when
+the balance is computed.
 """
 
 from datetime import date as dt_date
@@ -27,7 +27,7 @@ class CreateExpense(BaseModel):
     op: Literal["create_expense"]
     account_id: int
     envelope_id: int | None = None
-    amount: int  # IDR, positif
+    amount: int  # IDR, positive
     date: dt_date
     payee: str | None = None
     memo: str | None = None
@@ -36,7 +36,7 @@ class CreateExpense(BaseModel):
 class CreateIncome(BaseModel):
     op: Literal["create_income"]
     account_id: int
-    envelope_id: int | None = None  # nullable: income tanpa kategori = Ready To Assign
+    envelope_id: int | None = None  # nullable: income without a category = Ready To Assign
     amount: int
     date: dt_date
     payee: str | None = None
@@ -45,8 +45,8 @@ class CreateIncome(BaseModel):
 
 class CreateTransfer(BaseModel):
     op: Literal["create_transfer"]
-    account_id: int  # sumber
-    transfer_account_id: int  # tujuan
+    account_id: int  # source
+    transfer_account_id: int  # destination
     amount: int
     date: dt_date
     memo: str | None = None
@@ -55,7 +55,7 @@ class CreateTransfer(BaseModel):
 class UpdateTransaction(BaseModel):
     op: Literal["update"]
     id: int
-    # Semua field optional — partial update via exclude_unset
+    # All fields optional — partial update via exclude_unset
     type: TxType | None = None
     account_id: int | None = None
     envelope_id: int | None = None

@@ -4,134 +4,159 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Finance MCP** is an AI-powered envelope budgeting MCP (Model Context Protocol) server designed to integrate with any MCP client (Claude, Cursor, etc.). It implements envelope budgeting methodology where every rupiah (IDR) is assigned to a specific category.
+**Envel** is an AI-powered envelope budgeting platform. It implements envelope
+budgeting methodology — every rupiah (IDR) is assigned to a specific category —
+exposed over the Model Context Protocol (MCP) and driven by a conversational
+LangGraph agent.
 
-This is a monorepo with three apps:
+This is a monorepo of **four independently deployed services** that communicate
+**only over HTTP** (no shared Python imports between apps):
 
-- `apps/mcp-server/` — FastMCP server exposing financial tools and prompts (port 8001)
-- `apps/auth-server/` — OAuth 2.1 authentication server (port 9004)
-- `apps/platform/server/` — FastAPI REST API backend for the platform (port 8002)
-- `apps/platform/web/` — React + TypeScript frontend (Vite, Shadcn/ui, Tailwind)
+- `apps/mcp-server/` — FastMCP server exposing finance tools & prompts (host port **8001**, container 8000)
+- `apps/auth-server/` — OAuth 2.1 / JWT authentication server (host port **9000**)
+- `apps/agent/` — LangGraph Deep Agent that drives the tools (host port **8002**, container 8000)
+- `apps/web/` — Next.js 16 chat UI (host port **3000**)
 
-All three apps communicate only via HTTP (token introspection), not via shared Python imports.
+Each app has its own `README.md`, `.env.example`, `Dockerfile`, and
+`docker-compose.yml` (included from the root `docker-compose.yml`). The agent's
+behavior is defined by the canonical skill at `skills/envel/SKILL.md`.
 
 ## Commands
 
-### Install
+The whole stack runs via Docker Compose from the repo root.
+
+### Run (Docker Compose)
 
 ```bash
-pip install -e apps/mcp-server
-pip install -e apps/auth-server
-pip install -e apps/platform/server
+# Dev: bare command auto-applies docker-compose.override.yml
+# (source mounts + hot reload for the Python services)
+docker compose up -d --build
+
+# Prod: images only, no override (this is what scripts/deploy.sh uses)
+docker compose -f docker-compose.yml up -d --no-build
 ```
 
-### Run
+Ports: web `:3000`, mcp `:8001`, auth `:9000`, agent `:8002`.
 
-```bash
-# MCP server
-envel
+### Configure `.env` per app
 
-# Auth server
-envel-auth
+Secrets live **per app** — each `.env` is the interpolation source for that
+app's compose file. Copy from each `.env.example`. Cross-app invariants:
 
-# Platform dashboard
-envel-platform
-```
+- `JWT_SECRET` — **identical** across auth-server, mcp-server, and agent (HS256).
+- `INTERNAL_API_KEY` — **identical** across auth-server and mcp-server.
+- `AUTH_DATA_KEY` — Fernet key in auth-server (encrypts each user's `db_url` at rest).
+- `OPENAI_API_KEY` + `LANGSMITH_API_KEY` in agent (the containerized LangGraph
+  server verifies a Self-Hosted Lite license on startup).
 
-### Minimal `.env` for local testing
+### Agent dev loop
 
-```env
-TEST_TOKEN=any-token-value
-TEST_DB=./users/test.db
-```
-
-With these set, `TestTokenVerifier` activates — no auth server needed.
-
-### Production (VPS)
-
-```bash
-systemctl start envel-auth envel-mcp
-journalctl -u envel-mcp -f
-```
+The agent has a faster non-Docker loop via `langgraph dev` (http://localhost:2024).
+See `apps/agent/README.md`.
 
 ## Architecture
 
-### URL Structure (Production)
-
-- `envel.dev` — marketing site (React + Vite, `apps/marketing/`)
-- `envel.dev/mcp` — MCP server (port 8001)
-- `envel.dev/auth` — Auth server (port 9004)
-- `platform.envel.dev` — Platform dashboard (port 8002 backend + Vite frontend)
-
-### Request Flow
+### Service topology
 
 ```text
-MCP client → Nginx → envel.dev/mcp  → MCP Server   (port 8001)
-                   → envel.dev/auth → Auth Server  (port 9004)
-Browser    → Nginx → envel.dev      → Marketing    (static)
-                   → platform.envel.dev → Platform (port 8002)
+Browser ─▶ web (:3000) ──Bearer JWT──▶ agent (:8002)
+                                          │ verify JWT (HS256), forward token
+                                          ▼
+   auth-server (:9000) ◀──introspect/db-url──── mcp-server (:8001)
+        │                                            │
+ Postgres (envel_auth)              Postgres (envel_managed, schema=user_<id>)
+
+MCP clients (Claude/ChatGPT) ── OAuth 2.1 ─▶ auth-server ─▶ mcp-server
 ```
 
-### Per-User Database Isolation
+### Per-user data isolation (Postgres schemas)
 
-Each user has their own SQLite database. The path is stored in `users.db` (a shared SQLite database with hashed credentials) and injected via a `ContextVar` (`_db_path` in `apps/mcp-server/src/envel_mcp/deps.py`) when a token is verified. All tools access the database through `get_user_db()` context manager in `deps.py`, which also auto-initializes schema from `schema.sql` on first access.
+Each user's financial data lives in its **own Postgres schema** (`user_<id>`)
+inside the `envel_managed` database. The auth server stores each user's
+`db_url` **encrypted at rest with Fernet** (`AUTH_DATA_KEY`).
 
-### User Authentication
+On each request the MCP server (`apps/mcp-server/src/deps.py`):
 
-Users are stored in `users.db` (SQLite, gitignored) with bcrypt-hashed passwords. The `USERS_DB` env var must point to this file. Use `scripts/add_user.py` to manage users:
+1. `current_user()` reads the verified JWT's `sub`, then fetches the user's
+   `db_url` from the auth server's `/internal/db-url` endpoint (authorized with
+   `INTERNAL_API_KEY`, cached 5 min per username).
+2. `user_session(db_url)` yields a SQLAlchemy session bound to that user's
+   schema. Engines are cached per `db_url` to avoid reconnecting each request.
 
-```bash
-python scripts/add_user.py <username> <password> [--db-path PATH]
-```
+### Authentication
 
-### Token Verification
+- Login & token issuance happen in `apps/auth-server`. Tokens are **JWTs signed
+  HS256** with the shared `JWT_SECRET`.
+- The **agent** verifies incoming JWTs locally (`apps/agent/envel_agent/auth.py`)
+  and forwards them to MCP per request; it also scopes LangGraph threads to their
+  owner.
+- The **MCP server** trusts JWTs verified by FastMCP and resolves them to a DB
+  URL via the auth server's internal API. MCP clients authenticate via the full
+  OAuth 2.1 flow against the auth server.
+- `/internal/*` endpoints on the auth server are protected by `INTERNAL_API_KEY`
+  and must not be exposed publicly.
 
-`apps/mcp-server/src/envel_mcp/server.py` defines two verifiers:
+### MCP server internals (`apps/mcp-server/src/`)
 
-- **`EnvelTokenVerifier`** — production; calls `INTROSPECT_URL` on the auth server to resolve token → DB path
-- **`TestTokenVerifier`** — development; accepts `TEST_TOKEN` env var and uses `TEST_DB` path
+- `main.py` — builds the `FastMCP("Envel")` app, registers routes & sub-apps,
+  and mounts a `GenerativeUI` provider (LLM writes Prefab UI code, run in a
+  Pyodide/Deno sandbox; it cannot touch the DB and is fed data only via tools).
+- `components/tools/` — the finance tools: `account_crud`, `envelope_crud`,
+  `envelope_group_crud`, `get_workspace`, `plan_action`, `read_transactions`,
+  `write_transactions`.
+- `apps/` — higher-level interactive app surfaces (`envelopes`, `transactions`).
+- `config.py` — `pydantic-settings`; builds `managed_database_url` from
+  `POSTGRES_*` parts. `deps.py` — request-scoped user/session helpers.
+- `models.py` — SQLAlchemy models. Schema changes are managed by **Alembic**
+  (`alembic/versions/`).
 
-### Tool Organization
+### Database migrations (Alembic)
 
-Tools are implemented as FastMCP sub-servers in `apps/mcp-server/src/envel_mcp/tools/` and mounted under a "finance" namespace in the main server. Prompts are in `apps/mcp-server/src/envel_mcp/prompts/`.
+Both `apps/mcp-server` and `apps/auth-server` use Alembic. The MCP server runs
+migrations **per user schema** (`alembic -x schema=user_<id> upgrade head`) —
+`scripts/deploy.sh` iterates every `user_*` schema on deploy. Add a new
+migration for any schema change; never edit a merged migration.
 
-All MCP tool wrappers use FastMCP `Context` for logging (`ctx.info()`, `ctx.error()`), which sends log notifications to the MCP client.
+### Agent (`apps/agent/`)
 
-| Module | Responsibility |
-| ------ | -------------- |
-| `tools/accounts.py` | Bank accounts, e-wallets, cash |
-| `tools/transactions.py` | Income/expense/transfer records |
-| `tools/envelopes.py` | Envelope categories and groups |
-| `tools/scheduled.py` | Recurring/scheduled transactions |
-| `tools/analytics.py` | Summaries, ready-to-assign, age of money, onboarding status |
-| `tools/wishlist.py` | Personal shopping list |
-| `tools/apps.py` | Budget Allocator interactive UI (HTML resource) |
-| `prompts/budget.py` | Budget review and monthly planning prompts |
-| `prompts/onboarding.py` | First-time setup guidance |
+A standalone LangGraph **Deep Agent** (`envel_agent/`). It connects to the MCP
+server for all finance tools/data and loads `skills/envel/SKILL.md` as its
+system prompt. The Web client talks to this LangGraph server directly (no BFF).
+It has its **own** Postgres (pgvector) + Redis for chat history, checkpoints,
+and long-term memory — it never touches `envel_managed`. The package can't be
+named `src` (reserved by langgraph). The Dockerfile/compose are generated via
+`langgraph dockerfile`.
 
-### Envelope Target Types
+### Web (`apps/web/`)
 
-4 target types for expense envelopes:
+Next.js **16** (React 19) — **breaking changes from earlier Next versions**.
+Read `apps/web/AGENTS.md` and the bundled docs in `node_modules/next/dist/docs/`
+before writing UI code. It needs no `.env` in Docker (service URLs are set inline
+in its compose file).
 
-- `monthly_spending` — spend up to X per month
-- `monthly_savings` — assign X every month (accumulates)
-- `savings_balance` — save up to X total
-- `needed_by_date` — need X by a specific date
+## Deployment
 
-### Database Schema
+Single VM, Docker Compose, GHCR images. CI builds each service image and pushes
+to `ghcr.io/maulairfani/envel-{mcp,auth,agent,web}:<git-sha>`; the VM pulls and
+restarts (the VM never builds). `scripts/deploy.sh` pulls images, migrates the
+auth DB + every user schema, starts the stack, and health-checks (agent `/ok`,
+web `/login`). Rollback = re-run with an older `ENVEL_TAG`. Full guide:
+[`docs/deployment.md`](docs/deployment.md). CI/CD: `.github/workflows/ci-cd.yml`.
 
-8 tables in `apps/mcp-server/src/envel_mcp/schema.sql`: `accounts`, `envelope_groups`, `envelopes`, `budget_periods`, `transactions`, `scheduled_transactions`, `wishlist`. Budget allocation is tracked per-envelope per-month in `budget_periods` with `assigned` and `carryover` columns.
+## Logging
 
-### Logging
-
-- **MCP server**: FastMCP Context logging (`ctx.info()`) — sent to MCP client as notifications. Server-side logging via stdlib `logging` in token verifier.
-- **Auth server**: JSON structured logging via `python-json-logger`. Logs login attempts, token issuance/revocation, introspection.
-- **Platform backend**: JSON structured logging via `python-json-logger`. Logs login attempts.
-- **Platform frontend**: Vite dev server (`npm run dev` in `apps/platform/web/`). Proxies `/api` to port 8002. Build with `npm run build`.
+- **MCP server**: FastMCP `Context` logging (`ctx.info()`, `ctx.error()`) sent
+  to the MCP client as notifications.
+- **Auth server**: JSON structured logging (login attempts, token issuance/
+  revocation, introspection).
 
 ## Key Design Decisions
 
-- **`users.db`** (gitignored) stores usernames, bcrypt-hashed passwords, and db_path. `USERS_DB` env var must be set explicitly.
-- **`*.db` files** are gitignored. Each user's financial data lives in their own SQLite file.
-- The `apps/mcp-server/server.py` is a thin re-export shim for deployment entrypoints; real logic is in `src/envel_mcp/server.py`.
-- There are no tests or linting configs in this project currently.
+- Apps communicate **only over HTTP** — no shared Python packages.
+- Per-user isolation is a **Postgres schema per user**, with each user's DB URL
+  **Fernet-encrypted** in the auth DB.
+- `JWT_SECRET` must be identical across auth/mcp/agent; `INTERNAL_API_KEY` across
+  auth/mcp. These and all real secrets live only in per-app `.env` files (never
+  in git — only `.env.example` is committed).
+- The project is licensed **AGPL-3.0** (see `LICENSE`); contributions are subject
+  to the CLA terms in `CONTRIBUTING.md`.

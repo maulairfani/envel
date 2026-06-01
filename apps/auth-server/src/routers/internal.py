@@ -1,6 +1,6 @@
 """
-Internal routes — dipanggil service-to-service (mcp-server → auth-server),
-bukan untuk client publik. Dilindungi shared secret (INTERNAL_API_KEY).
+Internal routes — called service-to-service (mcp-server → auth-server),
+not for public clients. Protected by a shared secret (INTERNAL_API_KEY).
 """
 
 from fastapi import APIRouter, Depends, Header, HTTPException

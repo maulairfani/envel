@@ -47,7 +47,7 @@ export function ChatComposer({ onSend, onStop, isLoading = false }: ChatComposer
             }
           }}
           rows={1}
-          placeholder="Tanya apa aja soal budget kamu…"
+          placeholder="Ask anything about your budget…"
           className={cn(
             "max-h-[200px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm",
             "placeholder:text-muted-foreground focus:outline-none",
@@ -58,7 +58,7 @@ export function ChatComposer({ onSend, onStop, isLoading = false }: ChatComposer
             <Square className="fill-current" />
           </Button>
         ) : (
-          <Button size="icon" onClick={send} disabled={!value.trim()} aria-label="Kirim">
+          <Button size="icon" onClick={send} disabled={!value.trim()} aria-label="Send">
             <ArrowUp />
           </Button>
         )}

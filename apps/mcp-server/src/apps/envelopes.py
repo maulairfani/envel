@@ -1,14 +1,14 @@
 """
-Envelopes snapshot — interactive (read-only) status tiap envelope per group.
+Envelopes snapshot — interactive (read-only) status of each envelope per group.
 
-Tujuan: scan cepat posisi tiap budget dan langsung kelihatan envelope mana yang
-overspent. "Overspent" = `available < 0` (sudah belanja lebih dari yang tersedia
-di envelope, termasuk carryover). Tiap envelope = satu Card (progress bar
-spent vs budget + warna semantik), dikelompokkan per group (group jadi heading
-section). Ringkasan di atas menghitung berapa yang overspent.
+Purpose: quickly scan the position of each budget and immediately see which
+envelopes are overspent. "Overspent" = `available < 0` (spent more than is available
+in the envelope, including carryover). Each envelope = one Card (progress bar
+spent vs budget + semantic color), grouped per group (the group becomes a heading
+section). The summary on top counts how many are overspent.
 
-Angka diturunkan dari `build_workspace` (sama dengan tool get_workspace) supaya
-logika RTA/available tidak terduplikasi.
+The numbers are derived from `build_workspace` (same as the get_workspace tool) so
+the RTA/available logic isn't duplicated.
 """
 
 from datetime import datetime
@@ -57,19 +57,19 @@ def _avail_color(available: int) -> str:
 
 
 def _envelope_card(env: dict[str, Any]) -> None:
-    """Render satu envelope sebagai Card: nama + available + progress spent/budget."""
+    """Render one envelope as a Card: name + available + spent/budget progress."""
     activity = env["activity"]
     available = env["available"]
-    budget = available + activity  # = carryover + assigned (uang di envelope bln ini)
+    budget = available + activity  # = carryover + assigned (money in the envelope this month)
     overspent = available < 0
 
     if budget > 0:
         prog_max, prog_val = budget, activity
         variant = "destructive" if overspent else "success"
-    elif activity > 0:  # belanja tanpa budget → overspent penuh
+    elif activity > 0:  # spending without budget → fully overspent
         prog_max, prog_val = activity, activity
         variant = "destructive"
-    else:  # belum di-assign & belum ada aktivitas
+    else:  # not assigned yet & no activity yet
         prog_max, prog_val = 1, 0
         variant = "muted"
 
@@ -101,12 +101,12 @@ def _render(ws: dict[str, Any]) -> PrefabApp:
     rta = ws["ready_to_assign"]
     overspent_count = sum(1 for e in envelopes if e["available"] < 0)
 
-    # envelope per group_id (None = ungrouped)
+    # envelopes per group_id (None = ungrouped)
     by_group: dict[Any, list[dict]] = {}
     for e in envelopes:
         by_group.setdefault(e["group_id"], []).append(e)
 
-    # urutan: groups sesuai sort_order, lalu ungrouped di akhir
+    # order: groups by sort_order, then ungrouped at the end
     sections = [(g["id"], g["name"]) for g in groups if g["id"] in by_group]
     if None in by_group:
         sections.append((None, "Ungrouped"))
@@ -119,7 +119,7 @@ def _render(ws: dict[str, Any]) -> PrefabApp:
                     Muted(_period_label(target))
                     if overspent_count:
                         Badge(f"{overspent_count} overspent", variant="destructive")
-                # RTA hanya ditampilkan kalau bukan nol — di-emphasize via Alert.
+                # RTA is only shown when non-zero — emphasized via Alert.
                 if rta > 0:
                     with Alert(variant="info"):
                         AlertDescription(

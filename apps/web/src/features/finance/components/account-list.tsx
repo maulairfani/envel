@@ -13,12 +13,12 @@ const TYPE_LABEL: Record<AccountType, string> = {
   bank: "Bank",
   ewallet: "E-wallet",
   cash: "Cash",
-  credit_card: "Kartu kredit",
+  credit_card: "Credit card",
 };
 
 export function AccountList({ accounts }: { accounts: Account[] }) {
   if (accounts.length === 0) {
-    return <p className="text-sm text-muted-foreground">Belum ada akun.</p>;
+    return <p className="text-sm text-muted-foreground">No accounts yet.</p>;
   }
   return (
     <div className="space-y-2">

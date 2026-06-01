@@ -16,7 +16,7 @@ function deriveTitle(values: unknown): string {
     const text = typeof firstHuman.content === "string" ? firstHuman.content : "";
     if (text.trim()) return text.trim().slice(0, 60);
   }
-  return "Percakapan baru";
+  return "New conversation";
 }
 
 /** List the current user's threads (owner-scoped server-side) for the sidebar. */

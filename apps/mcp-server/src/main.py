@@ -10,11 +10,11 @@ from .routes import register_routes
 
 COMPONENTS_DIR = Path(__file__).resolve().parent / "components"
 
-# GenerativeUI: LLM menulis kode Prefab sendiri, dijalankan di sandbox Pyodide
-# (via subprocess Deno — lihat Dockerfile). Data divisualkan dengan cara LLM
-# memanggil tool data kita (get_workspace/read_transactions) lalu meneruskan
-# hasilnya ke parameter `data` generate_prefab_ui (sandbox terisolasi, tidak
-# bisa akses DB sendiri).
+# GenerativeUI: the LLM writes its own Prefab code, executed in a Pyodide sandbox
+# (via a Deno subprocess — see Dockerfile). Data is visualized by having the LLM
+# call our data tools (get_workspace/read_transactions) and then pass the
+# results to the `data` parameter of generate_prefab_ui (isolated sandbox, can't
+# access the DB itself).
 mcp = FastMCP(
     "Envel",
     auth=auth,

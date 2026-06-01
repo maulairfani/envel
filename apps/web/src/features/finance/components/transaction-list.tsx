@@ -24,7 +24,7 @@ export function TransactionList({
   envelopeNames,
 }: TransactionListProps) {
   if (transactions.length === 0) {
-    return <p className="text-sm text-muted-foreground">Belum ada transaksi.</p>;
+    return <p className="text-sm text-muted-foreground">No transactions yet.</p>;
   }
 
   // Group consecutive transactions by date (already sorted newest-first).
@@ -67,7 +67,7 @@ function Row({
   accountNames: Record<number, string>;
   envelopeNames: Record<number, string>;
 }) {
-  const acct = (id: number | null) => (id != null ? accountNames[id] ?? "Akun" : "Akun");
+  const acct = (id: number | null) => (id != null ? accountNames[id] ?? "Account" : "Account");
 
   let subtitle: string;
   if (t.type === "transfer") {

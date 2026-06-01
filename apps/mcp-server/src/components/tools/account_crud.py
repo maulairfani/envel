@@ -1,7 +1,7 @@
 """
-Account CRUD — create/update/delete satu akun per call.
+Account CRUD — create/update/delete one account per call.
 
-List akun dilakukan via `get_workspace` (tidak ada action 'list' di sini).
+Listing accounts is done via `get_workspace` (there is no 'list' action here).
 """
 
 from typing import Annotated, Any, Literal, Union

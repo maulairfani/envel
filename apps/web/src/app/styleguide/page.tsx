@@ -45,19 +45,19 @@ const TYPE_SCALE = [
 ] as const;
 
 const DEMO_MESSAGES: ChatMessage[] = [
-  { id: "1", role: "user", content: "Berapa sisa budget makan bulan ini?" },
+  { id: "1", role: "user", content: "How much of my food budget is left this month?" },
   {
     id: "2",
     role: "assistant",
     content:
-      "Envelope “Makan” masih punya Rp420.000 dari Rp1.500.000 yang kamu assign bulan ini.",
+      "The “Food” envelope still has Rp420.000 left of the Rp1.500.000 you assigned this month.",
     toolCalls: [
       {
         id: "t1",
         name: "get_workspace",
         status: "success",
         args: { period: "2026-06" },
-        result: { envelope: "Makan", assigned: 1500000, activity: 1080000, available: 420000 },
+        result: { envelope: "Food", assigned: 1500000, activity: 1080000, available: 420000 },
       },
     ],
   },
@@ -110,7 +110,7 @@ export default function StyleguidePage() {
             {TYPE_SCALE.map(([name, cls]) => (
               <div key={name} className="flex items-baseline gap-4">
                 <span className="w-20 shrink-0 text-xs text-muted-foreground">{name}</span>
-                <span className={cls}>Setiap rupiah punya tujuan</span>
+                <span className={cls}>Every rupiah has a purpose</span>
               </div>
             ))}
             <div className="flex items-baseline gap-4">
@@ -139,7 +139,7 @@ export default function StyleguidePage() {
             <Button loading>Loading</Button>
             <Button disabled>Disabled</Button>
             <Button>
-              Lanjut <ArrowRight />
+              Continue <ArrowRight />
             </Button>
           </div>
         </Section>
@@ -158,15 +158,15 @@ export default function StyleguidePage() {
         <Section title="Forms">
           <div className="grid max-w-md gap-4">
             <div className="space-y-2">
-              <Label htmlFor="sg-name">Nama envelope</Label>
-              <Input id="sg-name" placeholder="cth. Makan" />
+              <Label htmlFor="sg-name">Envelope name</Label>
+              <Input id="sg-name" placeholder="e.g. Food" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sg-note">Catatan</Label>
-              <Textarea id="sg-note" placeholder="Tulis sesuatu…" />
+              <Label htmlFor="sg-note">Note</Label>
+              <Textarea id="sg-note" placeholder="Write something…" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sg-err">Dengan error</Label>
+              <Label htmlFor="sg-err">With error</Label>
               <Input id="sg-err" aria-invalid defaultValue="invalid" />
             </div>
           </div>
@@ -185,11 +185,11 @@ export default function StyleguidePage() {
         <Section title="Card">
           <Card className="max-w-sm">
             <CardHeader>
-              <CardTitle>Makan</CardTitle>
+              <CardTitle>Food</CardTitle>
               <CardDescription>Spend monthly · target Rp1.500.000</CardDescription>
             </CardHeader>
             <CardContent className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Tersisa</span>
+              <span className="text-sm text-muted-foreground">Remaining</span>
               <MoneyText amount={420000} tone="positive" className="text-base" />
             </CardContent>
           </Card>

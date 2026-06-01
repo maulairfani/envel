@@ -1,8 +1,8 @@
 """
-Provisioning service — minta MCP server bikin schema + alembic migrate untuk user baru.
+Provisioning service — ask the MCP server to create the schema + run the alembic migration for a new user.
 
-Auth server tidak punya akses langsung ke `envel_managed` DB (separation of concerns).
-MCP yang punya models.py + alembic migrations untuk schema user.
+The auth server has no direct access to the `envel_managed` DB (separation of concerns).
+The MCP owns models.py + alembic migrations for the user schema.
 """
 
 import httpx
@@ -15,7 +15,7 @@ class ProvisioningError(Exception):
 
 
 async def provision_managed_user(username: str) -> str:
-    """Call MCP internal endpoint untuk bikin schema + migrate. Return db_url."""
+    """Call the MCP internal endpoint to create the schema + migrate. Return db_url."""
     url = f"{settings.mcp_internal_url.rstrip('/')}/internal/provision"
     headers = {"Authorization": f"Bearer {settings.internal_api_key}"}
     payload = {"username": username}

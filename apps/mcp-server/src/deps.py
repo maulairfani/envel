@@ -1,10 +1,10 @@
 """
-Request-scoped helpers untuk tools.
+Request-scoped helpers for tools.
 
-- current_user(): baca JWT (verified by FastMCP), fetch db_url dari auth via
-  /internal/db-url (cache 5 menit per username).
-- user_session(db_url): yield SQLAlchemy session ke schema user. Engine
-  di-cache per db_url (tidak di-dispose) supaya tidak buka TCP+auth per request.
+- current_user(): read the JWT (verified by FastMCP), fetch db_url from auth via
+  /internal/db-url (cached 5 minutes per username).
+- user_session(db_url): yield a SQLAlchemy session to the user's schema. The engine
+  is cached per db_url (not disposed) so it doesn't open TCP+auth per request.
 """
 
 import time
@@ -29,7 +29,7 @@ class CurrentUser:
 # ─── Caches ───
 _engines: dict[str, Engine] = {}
 _url_cache: dict[str, tuple[str, float]] = {}  # username → (db_url, expires_at)
-_URL_CACHE_TTL = 300  # 5 menit
+_URL_CACHE_TTL = 300  # 5 minutes
 
 
 def _fetch_db_url(username: str) -> str:

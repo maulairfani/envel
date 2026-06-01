@@ -5,8 +5,8 @@ import { currentPeriod } from "@/lib/period";
 import { cn, focusRing } from "@/lib/utils";
 
 const MONTHS = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 
 const selectCls = cn(
@@ -40,7 +40,7 @@ export function PeriodPicker({ period, basePath }: { period: string; basePath: s
   return (
     <div className="flex items-center gap-2">
       <select
-        aria-label="Bulan"
+        aria-label="Month"
         value={month}
         onChange={(e) => go(year, Number(e.target.value))}
         className={selectCls}
@@ -52,7 +52,7 @@ export function PeriodPicker({ period, basePath }: { period: string; basePath: s
         ))}
       </select>
       <select
-        aria-label="Tahun"
+        aria-label="Year"
         value={year}
         onChange={(e) => go(Number(e.target.value), month)}
         className={selectCls}
@@ -69,7 +69,7 @@ export function PeriodPicker({ period, basePath }: { period: string; basePath: s
           onClick={() => push()}
           className="text-xs font-medium text-primary hover:underline"
         >
-          Bulan ini
+          This month
         </button>
       )}
     </div>

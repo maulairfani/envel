@@ -24,7 +24,7 @@ def get_user(username: str) -> User | None:
 
 
 def create_user(username: str, password_hash: str, tier: str = "managed") -> None:
-    """Insert user tanpa db_url_encrypted dulu — di-set kemudian setelah provisioning."""
+    """Insert the user without db_url_encrypted first — it is set later after provisioning."""
     with psycopg.connect(settings.database_url) as conn, conn.cursor() as cur:
         cur.execute(
             "INSERT INTO users (username, password_hash, tier) VALUES (%s, %s, %s)",

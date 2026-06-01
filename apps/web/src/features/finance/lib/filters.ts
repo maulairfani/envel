@@ -12,8 +12,8 @@ export interface TransactionSearchParams {
 }
 
 export const TX_TYPES: { value: TransactionType; label: string }[] = [
-  { value: "expense", label: "Pengeluaran" },
-  { value: "income", label: "Pemasukan" },
+  { value: "expense", label: "Expense" },
+  { value: "income", label: "Income" },
   { value: "transfer", label: "Transfer" },
 ];
 

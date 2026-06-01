@@ -1,6 +1,6 @@
 """
-Internal routes — dipanggil service-to-service (auth-server ↔ mcp-server),
-bukan untuk client publik. Dilindungi shared secret (INTERNAL_API_KEY).
+Internal routes — called service-to-service (auth-server ↔ mcp-server),
+not for public clients. Protected by a shared secret (INTERNAL_API_KEY).
 """
 
 from fastmcp import FastMCP

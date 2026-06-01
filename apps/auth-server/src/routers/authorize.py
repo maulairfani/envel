@@ -41,7 +41,7 @@ def login(
 ):
     code = services.issue_code(username, password, redirect_uri)
     if code is None:
-        return HTMLResponse("Login gagal", status_code=401)
+        return HTMLResponse("Login failed", status_code=401)
     return RedirectResponse(
         f"{redirect_uri}?code={code}&state={state}",
         status_code=302,

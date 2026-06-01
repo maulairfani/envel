@@ -1,7 +1,7 @@
 """
-Envelope CRUD — create/update/delete satu envelope per call.
+Envelope CRUD — create/update/delete one envelope per call.
 
-List dilakukan via `get_workspace`.
+Listing is done via `get_workspace`.
 """
 
 from datetime import date
@@ -15,10 +15,10 @@ from src.models import Envelope
 
 
 TargetType = Literal[
-    "spend_monthly",  # belanja sampai X/bulan, refill ke target (sisa ngegulung)
-    "save_monthly",   # sisihkan X tiap bulan, numpuk tanpa akhir
-    "save_total",     # kumpulkan sampai X total, tanpa tanggal
-    "save_by_date",   # kumpulkan X sebelum target_date
+    "spend_monthly",  # spend up to X/month, refill to target (remainder rolls over)
+    "save_monthly",   # set aside X every month, accumulates indefinitely
+    "save_total",     # accumulate up to X total, no date
+    "save_by_date",   # accumulate X before target_date
 ]
 
 

@@ -37,7 +37,7 @@ class Envelope(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
-    icon: Mapped[str | None]  # nama lucide kebab-case (mis. "utensils"); lucide.dev/icons
+    icon: Mapped[str | None]  # lucide kebab-case name (e.g. "utensils"); lucide.dev/icons
     group_id: Mapped[int | None] = mapped_column(ForeignKey("envelope_groups.id"))
     target_type: Mapped[str | None]
     # spend_monthly | save_monthly | save_total | save_by_date
@@ -55,7 +55,7 @@ class Transaction(Base):
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
     envelope_id: Mapped[int | None] = mapped_column(ForeignKey("envelopes.id"))
     type: Mapped[str]  # income | expense | transfer
-    amount: Mapped[int]  # IDR, positive; sign tersirat dari type
+    amount: Mapped[int]  # IDR, positive; sign implied by type
     date: Mapped[date]
     payee: Mapped[str | None]
     memo: Mapped[str | None]

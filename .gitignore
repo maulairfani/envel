@@ -26,7 +26,7 @@ PLAN.md
 DEPLOY.md
 
 # Claude Code — track shared config (settings.json) & skills (.agents/),
-# tapi abaikan yang personal/scratch/non-portabel:
+# but ignore the personal/scratch/non-portable bits:
 .claude/settings.local.json
 .claude/worktrees/
 .claude/skills/

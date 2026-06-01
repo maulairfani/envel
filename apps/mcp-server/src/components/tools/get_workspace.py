@@ -1,22 +1,22 @@
 """
-Discovery tool — panggil sekali di awal session untuk dapat semua akun,
-envelope, dan envelope group milik user BESERTA posisi uangnya. Pakai
-output-nya sebagai context sepanjang session (LLM ingat ID + nama + budget).
+Discovery tool — call once at the start of a session to get all of the user's
+accounts, envelopes, and envelope groups ALONG WITH their money positions. Use
+its output as context throughout the session (the LLM remembers ID + name + budget).
 
-Setelah ada mutasi (account_crud/envelope_crud/plan_action/write_transactions),
-call ulang untuk refresh.
+After any mutation (account_crud/envelope_crud/plan_action/write_transactions),
+call again to refresh.
 
-Angka uang (semua IDR, integer) diturunkan dari `transactions` + `plans`
-(schema baru tidak menyimpan saldo akun maupun carryover):
+Money figures (all IDR, integer) are derived from `transactions` + `plans`
+(the new schema stores neither account balances nor carryover):
 
   balance(account)      = Σ income_in − Σ expense_out − Σ transfer_out + Σ transfer_in
-  total_balance         = Σ balance(account)  (transfer antar-akun saling meniadakan)
-  activity(env, period) = Σ amount expense untuk envelope itu di bulan tsb
-  carryover(env, P)     = max(0, available(env, P-1))   ← di-clamp ≥0, derived
+  total_balance         = Σ balance(account)  (transfers between accounts cancel out)
+  activity(env, period) = Σ expense amount for that envelope in that month
+  carryover(env, P)     = max(0, available(env, P-1))   ← clamped ≥0, derived
   available(env, P)     = carryover + assigned(env, P) − activity(env, P)
   ready_to_assign       = total_balance − Σ available(env, P)
 
-`period` default = bulan berjalan (YYYY-MM).
+`period` defaults to the current month (YYYY-MM).
 """
 
 import re
@@ -42,27 +42,27 @@ def _available_at(
     activity_by_period: dict[str, int],
     target: str,
 ) -> tuple[int, int, int]:
-    """Hitung (assigned, activity, available) satu envelope pada `target` period.
+    """Compute (assigned, activity, available) for one envelope at the `target` period.
 
-    Carryover diturunkan dengan telescoping: iterasi semua period berdata
-    (assigned atau activity) yang <= target secara kronologis, clamp ke >=0
-    tiap pergantian bulan. Period tanpa data hanya meneruskan carryover.
+    Carryover is derived by telescoping: iterate over all periods with data
+    (assigned or activity) that are <= target in chronological order, clamping to >=0
+    at each month rollover. Periods without data only carry the carryover forward.
     """
     periods = sorted(set(assigned_by_period) | set(activity_by_period))
     carry = 0
     available = 0
     seen_target = False
     for p in periods:
-        if p > target:  # string compare aman untuk YYYY-MM zero-padded
+        if p > target:  # string compare is safe for zero-padded YYYY-MM
             break
         a = assigned_by_period.get(p, 0)
         act = activity_by_period.get(p, 0)
         available = carry + a - act
         if p == target:
             seen_target = True
-        carry = max(0, available)  # carryover masuk ke period berikutnya
+        carry = max(0, available)  # carryover flows into the next period
     if not seen_target:
-        # target tidak punya data → available = carryover masuk (+0 −0)
+        # target has no data → available = incoming carryover (+0 −0)
         available = carry
     return (
         assigned_by_period.get(target, 0),
@@ -78,9 +78,9 @@ def resolve_period(period: str | None) -> str:
 
 
 def build_workspace(session, target: str) -> dict[str, Any]:
-    """Hitung snapshot workspace (akun+balance, envelope+available, RTA).
+    """Compute the workspace snapshot (accounts+balance, envelopes+available, RTA).
 
-    Dipisah dari tool agar bisa dipakai ulang oleh app UI (envelopes snapshot).
+    Split out from the tool so it can be reused by the app UI (envelopes snapshot).
     """
     accounts = (
         session.execute(select(Account).order_by(Account.id)).scalars().all()
@@ -96,7 +96,7 @@ def build_workspace(session, target: str) -> dict[str, Any]:
         session.execute(select(Envelope).order_by(Envelope.id)).scalars().all()
     )
 
-    # ── Saldo per akun: agregat amount per (account_id, type) + transfer masuk ──
+    # ── Balance per account: aggregate amount per (account_id, type) + incoming transfers ──
     bal_rows = session.execute(
         select(
             Transaction.account_id,
@@ -129,7 +129,7 @@ def build_workspace(session, target: str) -> dict[str, Any]:
 
     total_balance = sum(balance.values())
 
-    # ── assigned per (envelope, period) dari plans ──
+    # ── assigned per (envelope, period) from plans ──
     plan_rows = session.execute(
         select(Plan.envelope_id, Plan.period, Plan.assigned)
     ).all()
@@ -155,7 +155,7 @@ def build_workspace(session, target: str) -> dict[str, Any]:
     for env_id, p, amt in act_rows:
         activity_map.setdefault(env_id, {})[p] = amt
 
-    # ── available per envelope pada target period ──
+    # ── available per envelope at the target period ──
     envelope_out = []
     total_available = 0
     for e in envelopes:

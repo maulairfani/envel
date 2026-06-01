@@ -1,17 +1,17 @@
 """
 Transactions view — interactive (read-only) table of recent transactions.
 
-Model memanggil tool ini untuk membuka tabel; host me-render DataTable yang
-bisa di-search & di-sort sepenuhnya client-side (tidak ada round-trip ke
-server setelah render). Untuk query terprogram / filter granular, pakai tool
-`read_transactions`.
+The model calls this tool to open the table; the host renders a DataTable that
+can be searched & sorted entirely client-side (no round-trip to the
+server after render). For programmatic queries / granular filtering, use the
+`read_transactions` tool.
 
-Styling: pakai theme Presentation (Inter + angka tabular + baris lebih tinggi,
-cocok untuk tabel data fokus). Warna amount & badge tipe
-pakai semantic token (text-success/text-destructive, variant success/
-destructive) supaya ikut theme + dark mode. Catatan: kolom yang berisi
-komponen (type badge, amount berwarna) TIDAK di-sort — sorting di cell komponen
-tidak bermakna; kolom string (date/payee/account/envelope) tetap sortable.
+Styling: uses the Presentation theme (Inter + tabular numbers + taller rows,
+suited to focused data tables). Amount colors & type badges
+use semantic tokens (text-success/text-destructive, variant success/
+destructive) so they follow the theme + dark mode. Note: columns containing
+components (type badge, colored amount) are NOT sorted — sorting on component
+cells is meaningless; string columns (date/payee/account/envelope) stay sortable.
 """
 
 from typing import Annotated
@@ -37,17 +37,17 @@ from src.models import Account, Envelope, Transaction
 DEFAULT_LIMIT = 200
 MAX_LIMIT = 1000
 
-# Tampilkan expense sebagai negatif; income/transfer positif.
+# Show expense as negative; income/transfer positive.
 _SIGN = {"expense": -1}
 
-# Badge variant per tipe transaksi (semantic token, ikut theme).
+# Badge variant per transaction type (semantic token, follows theme).
 _TYPE_VARIANT = {
     "income": "success",
     "expense": "destructive",
     "transfer": "secondary",
 }
 
-# Warna teks amount per tipe.
+# Amount text color per type.
 _AMOUNT_CLASS = {
     "income": "text-success",
     "expense": "text-destructive",
@@ -57,7 +57,7 @@ _AMOUNT_CLASS = {
 
 def _format_idr(amount: int, type_: str) -> str:
     signed = amount * _SIGN.get(type_, 1)
-    # Pisah ribuan pakai titik (gaya IDR), prefix "Rp".
+    # Separate thousands with a dot (IDR style), prefix "Rp".
     return f"Rp {signed:,}".replace(",", ".")
 
 

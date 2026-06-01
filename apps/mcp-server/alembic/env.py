@@ -1,13 +1,13 @@
 """
 Alembic env.py — multi-schema aware.
 
-Tiap user managed punya schema sendiri di Postgres `envel_managed` (mis. `user_alice`).
-Migration di-apply per schema dengan:
+Each managed user has its own schema in Postgres `envel_managed` (e.g. `user_alice`).
+Migrations are applied per schema with:
 
     alembic -x schema=user_alice upgrade head
 
-`alembic_version` table dibuat di dalam schema yang sama, jadi tiap user punya
-state migration sendiri.
+The `alembic_version` table is created inside the same schema, so each user has
+its own migration state.
 """
 
 from logging.config import fileConfig
@@ -32,7 +32,7 @@ def _get_schema() -> str:
     schema = x_args.get("schema")
     if not schema:
         raise RuntimeError(
-            "Schema wajib di-pass. Contoh: alembic -x schema=user_alice upgrade head"
+            "Schema must be passed. Example: alembic -x schema=user_alice upgrade head"
         )
     return schema
 
@@ -68,7 +68,7 @@ def run_migrations_online() -> None:
         )
         with context.begin_transaction():
             context.run_migrations()
-        connection.commit()  # paksa commit kalau auto-commit di alembic ga jalan
+        connection.commit()  # force commit in case alembic auto-commit doesn't kick in
 
 
 if context.is_offline_mode():

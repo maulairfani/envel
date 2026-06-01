@@ -1,20 +1,20 @@
 """
-Schema provisioning untuk user managed.
+Schema provisioning for managed users.
 
-Endpoint /internal/provision dipanggil oleh auth-server saat sign up:
+The /internal/provision endpoint is called by auth-server on sign up:
   1. CREATE ROLE per user (random password, LOGIN, no superuser)
-  2. CREATE SCHEMA, owner = admin (bukan user) → user tidak punya CREATE
-  3. GRANT SELECT/INSERT/UPDATE/DELETE pada tables + default privileges
-  4. Run alembic upgrade head (pakai admin URL, karena butuh DDL)
-  5. Return URL ber-credential role user (bukan admin)
+  2. CREATE SCHEMA, owner = admin (not the user) → the user has no CREATE
+  3. GRANT SELECT/INSERT/UPDATE/DELETE on tables + default privileges
+  4. Run alembic upgrade head (using the admin URL, since DDL is needed)
+  5. Return a URL with the user role's credentials (not admin)
 
-Role user TIDAK punya:
+The user role does NOT have:
   - CREATE / DROP / ALTER (DDL)
-  - Access ke schema lain
+  - Access to other schemas
   - Superuser flag
 
-Jadi tool query (yang pakai role ini) cuma bisa SELECT/INSERT/UPDATE/DELETE
-di schema sendiri. DDL ditolak Postgres.
+So query tools (that use this role) can only SELECT/INSERT/UPDATE/DELETE
+in their own schema. DDL is rejected by Postgres.
 """
 
 import re
@@ -48,30 +48,30 @@ def _build_user_url(role: str, password: str, schema: str) -> str:
 
 
 def _setup_role_and_schema(conn: psycopg.Connection, schema: str, role: str, password: str) -> None:
-    """Create role + schema + grants. Pakai psycopg.sql.Identifier untuk escape aman."""
+    """Create role + schema + grants. Use psycopg.sql.Identifier for safe escaping."""
     ident_schema = sql.Identifier(schema)
     ident_role = sql.Identifier(role)
 
     with conn.cursor() as cur:
-        # 1. CREATE ROLE (LOGIN, password). DDL tidak terima parameter binding,
-        # jadi pakai sql.Literal yang escape string secara aman.
+        # 1. CREATE ROLE (LOGIN, password). DDL does not accept parameter binding,
+        # so use sql.Literal which escapes the string safely.
         cur.execute(
             sql.SQL("CREATE ROLE {role} WITH LOGIN PASSWORD {pw}").format(
                 role=ident_role, pw=sql.Literal(password)
             )
         )
 
-        # 2. CREATE SCHEMA — owner = current_user (admin), bukan user_role
+        # 2. CREATE SCHEMA — owner = current_user (admin), not user_role
         cur.execute(sql.SQL("CREATE SCHEMA {schema}").format(schema=ident_schema))
 
-        # 3. USAGE pada schema (user bisa "lihat" schema)
+        # 3. USAGE on the schema (so the user can "see" the schema)
         cur.execute(
             sql.SQL("GRANT USAGE ON SCHEMA {schema} TO {role}").format(
                 schema=ident_schema, role=ident_role
             )
         )
 
-        # 4. DML grant pada semua tabel existing (kosong saat awal, tapi safe)
+        # 4. DML grant on all existing tables (empty at first, but safe)
         cur.execute(
             sql.SQL(
                 "GRANT SELECT, INSERT, UPDATE, DELETE "
@@ -79,8 +79,8 @@ def _setup_role_and_schema(conn: psycopg.Connection, schema: str, role: str, pas
             ).format(schema=ident_schema, role=ident_role)
         )
 
-        # 5. DEFAULT PRIVILEGES: saat admin (envel) create tabel baru di schema ini
-        #    (lewat alembic upgrade), grant otomatis ke user_role.
+        # 5. DEFAULT PRIVILEGES: when admin (envel) creates new tables in this schema
+        #    (via alembic upgrade), automatically grant them to user_role.
         cur.execute(
             sql.SQL(
                 "ALTER DEFAULT PRIVILEGES IN SCHEMA {schema} "
@@ -88,7 +88,7 @@ def _setup_role_and_schema(conn: psycopg.Connection, schema: str, role: str, pas
             ).format(schema=ident_schema, role=ident_role)
         )
 
-        # 6. Forward-compat untuk sequence (jika model nantinya pakai SERIAL/sequence)
+        # 6. Forward-compat for sequences (in case models later use SERIAL/sequences)
         cur.execute(
             sql.SQL(
                 "ALTER DEFAULT PRIVILEGES IN SCHEMA {schema} "
@@ -102,14 +102,14 @@ def provision(username: str) -> str:
     role = schema  # role name = schema name (1:1 mapping)
     password = secrets.token_urlsafe(32)
 
-    # 1-2-3. Setup role + schema + grants (sebagai admin)
+    # 1-2-3. Setup role + schema + grants (as admin)
     with psycopg.connect(settings.managed_database_url) as conn:
         _setup_role_and_schema(conn, schema, role, password)
         conn.commit()
 
-    # 4. Run alembic upgrade — pakai admin URL (settings.managed_database_url)
-    #    karena butuh CREATE TABLE privilege. Tabel yang dibuat otomatis dapat
-    #    grant via ALTER DEFAULT PRIVILEGES di atas.
+    # 4. Run alembic upgrade — use admin URL (settings.managed_database_url)
+    #    since CREATE TABLE privilege is needed. Created tables automatically get
+    #    grants via the ALTER DEFAULT PRIVILEGES above.
     result = subprocess.run(
         ["alembic", "-x", f"schema={schema}", "upgrade", "head"],
         cwd=REPO_ROOT,
@@ -121,5 +121,5 @@ def provision(username: str) -> str:
             f"alembic upgrade failed: {result.stderr or result.stdout}"
         )
 
-    # 5. Build URL dengan role user (limited privileges)
+    # 5. Build URL with the user role (limited privileges)
     return _build_user_url(role, password, schema)

@@ -21,7 +21,7 @@ export default async function EnvelopesPage({
   } catch {
     return (
       <PageView title="Envelopes">
-        <p className="text-sm text-negative">Gagal memuat data dari server.</p>
+        <p className="text-sm text-negative">Failed to load data from the server.</p>
       </PageView>
     );
   }
@@ -38,7 +38,7 @@ export default async function EnvelopesPage({
           <PeriodPicker period={period} basePath="/envelopes" />
         </div>
         <div className="text-right">
-          <div className="text-xs text-muted-foreground">Siap dialokasikan</div>
+          <div className="text-xs text-muted-foreground">Ready to assign</div>
           <MoneyText
             amount={rta}
             tone={rta < 0 ? "negative" : rta > 0 ? "positive" : "neutral"}

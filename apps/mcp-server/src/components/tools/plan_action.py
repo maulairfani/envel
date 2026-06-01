@@ -1,21 +1,21 @@
 """
-Plan / budget action — assign budget, move money antar envelope, atau
-penyesuaian saldo akun.
+Plan / budget action — assign budget, move money between envelopes, or
+adjust an account balance.
 
-`assign`: ubah `plans.assigned` untuk envelope di period.
-  - mode="set" (default): set ke nilai absolut.
-  - mode="add": tambah delta ke nilai sekarang; amount boleh negatif (= kurangi).
-`move`: kurangi dari satu envelope, tambah ke envelope lain (atomik).
-`adjust_balance`: set saldo sebuah akun ke `target_balance`. Saldo akun itu
-  derived dari transaksi, jadi op ini membuat 1 transaksi penyesuaian
-  (income/expense, envelope_id=null) sebesar selisihnya. Karena tak ter-assign
-  ke envelope mana pun, selisih itu langsung masuk/keluar Ready-to-Assign (RTA).
+`assign`: change `plans.assigned` for an envelope in a period.
+  - mode="set" (default): set to an absolute value.
+  - mode="add": add a delta to the current value; amount may be negative (= subtract).
+`move`: subtract from one envelope, add to another envelope (atomic).
+`adjust_balance`: set an account's balance to `target_balance`. That account balance is
+  derived from transactions, so this op creates 1 adjustment transaction
+  (income/expense, envelope_id=null) for the difference. Since it isn't assigned
+  to any envelope, that difference goes straight in/out of Ready-to-Assign (RTA).
 
-Semua operations dalam 1 DB transaction. Return menyertakan `ready_to_assign`
-(bulan berjalan) terbaru supaya bisa langsung dijelaskan ke user.
+All operations in 1 DB transaction. The return includes the latest `ready_to_assign`
+(current month) so it can be explained to the user right away.
 
-Catatan: tool ini TIDAK mengelola `carryover` — itu derived (dihitung saat read
-dari (period-1).assigned + (period-1).carryover - activity(period-1)).
+Note: this tool does NOT manage `carryover` — that is derived (computed on read
+from (period-1).assigned + (period-1).carryover - activity(period-1)).
 """
 
 import re
@@ -45,7 +45,7 @@ class AssignOp(BaseModel):
     op: Literal["assign"]
     envelope_id: int
     period: str  # YYYY-MM
-    amount: int  # mode=set: nilai absolut; mode=add: delta (boleh negatif = kurangi)
+    amount: int  # mode=set: absolute value; mode=add: delta (may be negative = subtract)
     mode: Literal["set", "add"] = "set"
 
     @field_validator("period")
@@ -59,7 +59,7 @@ class MoveOp(BaseModel):
     from_envelope_id: int
     to_envelope_id: int
     period: str
-    amount: int  # positif; akan dikurangi dari `from`, ditambah ke `to`
+    amount: int  # positive; will be subtracted from `from`, added to `to`
 
     @field_validator("period")
     @classmethod
@@ -70,7 +70,7 @@ class MoveOp(BaseModel):
 class AdjustBalanceOp(BaseModel):
     op: Literal["adjust_balance"]
     account_id: int
-    target_balance: int  # set saldo akun ke nilai absolut ini (IDR)
+    target_balance: int  # set the account balance to this absolute value (IDR)
 
 
 PlanOp = Annotated[
@@ -79,7 +79,7 @@ PlanOp = Annotated[
 
 
 def _account_balance(session, account_id: int) -> int:
-    """Saldo akun saat ini, diturunkan dari transaksi (lihat get_workspace)."""
+    """Current account balance, derived from transactions (see get_workspace)."""
     rows = session.execute(
         select(Transaction.type, func.coalesce(func.sum(Transaction.amount), 0))
         .where(Transaction.account_id == account_id)
@@ -115,7 +115,7 @@ def plan_action(operations: list[PlanOp]) -> dict[str, Any]:
             if isinstance(op, AssignOp):
                 plan = _upsert_plan(session, op.envelope_id, op.period)
                 if op.mode == "add":
-                    plan.assigned += op.amount  # amount negatif = kurangi
+                    plan.assigned += op.amount  # negative amount = subtract
                 else:
                     plan.assigned = op.amount
                 affected[(plan.envelope_id, plan.period)] = plan
@@ -137,12 +137,12 @@ def plan_action(operations: list[PlanOp]) -> dict[str, Any]:
                     session.add(
                         Transaction(
                             account_id=op.account_id,
-                            envelope_id=None,  # tak ter-assign → mengalir ke RTA
+                            envelope_id=None,  # unassigned → flows to RTA
                             type="income" if delta > 0 else "expense",
                             amount=abs(delta),
                             date=dt_date.today(),
-                            payee="Penyesuaian saldo",
-                            memo="Penyesuaian saldo otomatis (plan_action)",
+                            payee="Balance adjustment",
+                            memo="Automatic balance adjustment (plan_action)",
                         )
                     )
                 adjustments.append(
@@ -154,7 +154,7 @@ def plan_action(operations: list[PlanOp]) -> dict[str, Any]:
                     }
                 )
 
-        # Flush dulu agar build_workspace melihat perubahan, hitung RTA, lalu commit.
+        # Flush first so build_workspace sees the changes, compute RTA, then commit.
         session.flush()
         ws = build_workspace(session, resolve_period(None))
         session.commit()

@@ -4,5 +4,5 @@ from . import internal
 
 
 def register_routes(mcp: FastMCP) -> None:
-    """Daftarkan semua custom HTTP route ke instance FastMCP."""
+    """Register all custom HTTP routes onto the FastMCP instance."""
     internal.register(mcp)

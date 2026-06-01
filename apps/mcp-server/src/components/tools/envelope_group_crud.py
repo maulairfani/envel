@@ -1,7 +1,7 @@
 """
-Envelope group CRUD — create/update/delete satu group per call.
+Envelope group CRUD — create/update/delete one group per call.
 
-List dilakukan via `get_workspace`.
+Listing is done via `get_workspace`.
 """
 
 from typing import Annotated, Any, Literal, Union

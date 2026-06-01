@@ -5,7 +5,7 @@ export default function DashboardsPage() {
     <PageView title="Dashboards">
       <div className="rounded-lg border border-dashed border-border p-8 text-center">
         <p className="text-sm text-muted-foreground">
-          Segera hadir — nanti kamu bisa bikin dashboard sendiri lewat Grafana.
+          Coming soon — you'll be able to build your own dashboards with Grafana.
         </p>
       </div>
     </PageView>

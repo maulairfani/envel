@@ -35,7 +35,7 @@ export function EnvelopeList({
   envelopes: Envelope[];
 }) {
   if (envelopes.length === 0) {
-    return <p className="text-sm text-muted-foreground">Belum ada envelope.</p>;
+    return <p className="text-sm text-muted-foreground">No envelopes yet.</p>;
   }
 
   const sections = [
