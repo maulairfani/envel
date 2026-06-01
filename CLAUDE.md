@@ -162,6 +162,10 @@ Every change follows an issue-first, PR-based flow — never commit straight to 
 3. **Commit** using [Conventional Commits](https://www.conventionalcommits.org/)
    (`fix(web): …`, `feat(agent): …`, `docs: …`). Keep commits focused — don't mix
    an unrelated refactor or docs change into a bug fix.
+   - **Update `CHANGELOG.md`** when the change is user-/operator-facing: add a
+     line under `## [Unreleased]` in the right group (`Added`/`Changed`/`Fixed`/
+     `Removed`/`Security`). Skip for internal-only refactors, chores, or CI/docs
+     tweaks no user would notice.
 4. **Open a PR** to `main` that references the issue with `Closes #<n>` so the
    issue auto-closes and its card on the **Envel Roadmap** project board
    (<https://github.com/users/maulairfani/projects/2>) moves to Done on merge.
