@@ -1,4 +1,5 @@
 import { Sparkles } from "lucide-react";
+import { Markdown } from "@/components/ui";
 import { ToolCallView } from "./tool-call-view";
 import type { ChatMessage } from "../types";
 
@@ -31,9 +32,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
           </div>
         )}
         {message.content && (
-          <div className="text-sm leading-relaxed text-chat-agent-foreground">
-            {message.content}
-          </div>
+          <Markdown className="text-chat-agent-foreground">{message.content}</Markdown>
         )}
       </div>
     </div>

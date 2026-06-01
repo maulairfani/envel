@@ -16,3 +16,4 @@ export { Separator, type SeparatorProps } from "./separator";
 export { Spinner } from "./spinner";
 export { Avatar, type AvatarProps } from "./avatar";
 export { MoneyText, type MoneyTextProps } from "./money-text";
+export { Markdown } from "./markdown";
