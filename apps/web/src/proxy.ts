@@ -8,6 +8,11 @@ import { TOKEN_COOKIE, isPublicPath } from "@/features/auth/constants";
  */
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // API routes enforce their own auth (and return 401 JSON rather than an
+  // HTML redirect that would break fetch/XHR callers like the LangGraph SDK).
+  if (pathname.startsWith("/api/")) return NextResponse.next();
+
   if (isPublicPath(pathname)) return NextResponse.next();
 
   const token = req.cookies.get(TOKEN_COOKIE)?.value;
