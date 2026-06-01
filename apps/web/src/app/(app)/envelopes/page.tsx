@@ -30,14 +30,14 @@ export default async function EnvelopesPage({
 
   return (
     <PageView title="Envelopes">
-      <div className="mb-5 flex items-end justify-between gap-4">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Period
           </div>
           <PeriodPicker period={period} basePath="/envelopes" />
         </div>
-        <div className="text-right">
+        <div className="sm:text-right">
           <div className="text-xs text-muted-foreground">Ready to assign</div>
           <MoneyText
             amount={rta}

@@ -54,7 +54,7 @@ function Detail({ label, value }: { label: string; value: unknown }) {
       <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </div>
-      <pre className="overflow-x-auto whitespace-pre-wrap break-words font-numeric text-[11px] leading-relaxed text-foreground/80">
+      <pre className="max-h-64 overflow-auto overscroll-contain whitespace-pre-wrap break-words rounded bg-surface-2/40 p-2 font-numeric text-[11px] leading-relaxed text-foreground/80">
         {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
       </pre>
     </div>

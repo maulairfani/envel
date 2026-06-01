@@ -49,14 +49,15 @@ export default async function TransactionsPage({
 
   return (
     <PageView title="Transactions">
-      <div className="mb-3 flex items-end justify-between gap-4">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Period
           </div>
           <PeriodPicker period={period} basePath="/transactions" />
         </div>
-        <div className="flex gap-6 text-right">
+        {/* Desktop: aggregate sits top-right next to the period picker. */}
+        <div className="hidden gap-6 text-right sm:flex">
           <div>
             <div className="text-xs text-muted-foreground">In</div>
             <MoneyText amount={income} tone="positive" showSign className="text-lg" />
@@ -69,6 +70,18 @@ export default async function TransactionsPage({
       </div>
 
       <TransactionFilters accounts={ws.accounts} envelopes={ws.envelopes} />
+
+      {/* Mobile: aggregate sits below the filter, above the list. */}
+      <div className="mb-3 flex gap-6 sm:hidden">
+        <div>
+          <div className="text-xs text-muted-foreground">In</div>
+          <MoneyText amount={income} tone="positive" showSign className="text-lg" />
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Out</div>
+          <MoneyText amount={-expense} tone="negative" className="text-lg" />
+        </div>
+      </div>
 
       {page.transactions.length === 0 ? (
         <p className="text-sm text-muted-foreground">
