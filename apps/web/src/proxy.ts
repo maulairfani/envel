@@ -17,7 +17,10 @@ export function proxy(req: NextRequest) {
 
   const token = req.cookies.get(TOKEN_COOKIE)?.value;
   if (!token) {
-    return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
+    // Relative Location: the browser resolves it against the address-bar origin
+    // (chat.envel.dev). Behind the proxy, req.nextUrl.origin is the internal
+    // bind host (0.0.0.0:3000), so an absolute redirect would break.
+    return new NextResponse(null, { status: 307, headers: { Location: "/login" } });
   }
   return NextResponse.next();
 }
