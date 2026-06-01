@@ -17,10 +17,13 @@ export function proxy(req: NextRequest) {
 
   const token = req.cookies.get(TOKEN_COOKIE)?.value;
   if (!token) {
-    // Relative Location: the browser resolves it against the address-bar origin
-    // (chat.envel.dev). Behind the proxy, req.nextUrl.origin is the internal
-    // bind host (0.0.0.0:3000), so an absolute redirect would break.
-    return new NextResponse(null, { status: 307, headers: { Location: "/login" } });
+    // Next 16 validates the proxy redirect's Location with `new URL()`, so a
+    // relative "/login" throws ERR_INVALID_URL → 500. Build an absolute URL,
+    // but from the forwarded headers, not req.nextUrl.origin (that is the
+    // internal bind host, 0.0.0.0:3000, behind nginx-proxy-manager).
+    const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? req.nextUrl.host;
+    return NextResponse.redirect(new URL("/login", `${proto}://${host}`), 307);
   }
   return NextResponse.next();
 }

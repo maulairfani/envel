@@ -150,6 +150,29 @@ web `/login`). Rollback = re-run with an older `ENVEL_TAG`. Full guide:
 - **Auth server**: JSON structured logging (login attempts, token issuance/
   revocation, introspection).
 
+## GitHub workflow (best practice)
+
+Every change follows an issue-first, PR-based flow — never commit straight to `main`:
+
+1. **Open an issue first.** Bug, feature, or docs — describe context, the change,
+   and acceptance criteria. **Always apply at least one label** (`bug`,
+   `enhancement`, `documentation`, etc.; see `gh label list`).
+2. **Branch from `main`** with a prefix matching the work:
+   `fix/*`, `feat/*`, `docs/*`, `chore/*` (e.g. `fix/web-proxy-redirect-500`).
+3. **Commit** using [Conventional Commits](https://www.conventionalcommits.org/)
+   (`fix(web): …`, `feat(agent): …`, `docs: …`). Keep commits focused — don't mix
+   an unrelated refactor or docs change into a bug fix.
+4. **Open a PR** to `main` that references the issue with `Closes #<n>` so the
+   issue auto-closes and its card on the **Envel Roadmap** project board
+   (<https://github.com/users/maulairfani/projects/2>) moves to Done on merge.
+   Fill in the PR template; CI (build of every service image) must pass.
+5. **Track work on the board** — new issues go to the board in `Todo`, move to
+   `In Progress` when started.
+
+> Assistant note: when asked to "commit", the assistant only **stages the
+> relevant files and proposes a one-line commit message** — the human runs the
+> actual `git commit`/`push`.
+
 ## Key Design Decisions
 
 - Apps communicate **only over HTTP** — no shared Python packages.
