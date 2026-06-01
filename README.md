@@ -1,10 +1,25 @@
-# Envel
+<div align="center">
 
-**Budget with the AI you already use.** Envel is an envelope-budgeting engine
-exposed over the [Model Context Protocol](https://modelcontextprotocol.io), so
-you can manage your money straight from **Claude, ChatGPT, or any MCP client** —
-no new app to learn. Connect it once and just talk: *"log my groceries,"* *"how
-much is left this month?"*, *"help me plan my paycheck."*
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/dark-horizontal-lockup.png">
+  <img alt="Envel" src=".github/assets/horizontal-lockup.png" width="360">
+</picture>
+
+**Budget with the AI you already use.**
+
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+
+</div>
+
+---
+
+Envel is an envelope-budgeting engine exposed over the
+[Model Context Protocol](https://modelcontextprotocol.io), so you can manage your
+money straight from **Claude, ChatGPT, or any MCP client** — no new app to learn.
+Connect it once and just talk: *"log my groceries,"* *"how much is left this
+month?"*, *"help me plan my paycheck."*
 
 Don't have a favorite AI client, or want a ready-made experience? Envel also
 **ships its own agent and chat web app** — the same engine, with a finance-tuned
