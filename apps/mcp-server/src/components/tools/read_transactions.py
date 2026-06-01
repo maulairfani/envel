@@ -21,11 +21,15 @@ MAX_LIMIT = 1000
 @tool
 def read_transactions(
     envelope_id: int | None = None,
+    envelope_ids: list[int] | None = None,
     account_id: int | None = None,
+    account_ids: list[int] | None = None,
     type: Literal["income", "expense", "transfer"] | None = None,
+    types: list[Literal["income", "expense", "transfer"]] | None = None,
     date_from: dt_date | None = None,
     date_to: dt_date | None = None,
     payee_contains: str | None = None,
+    search: str | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> dict[str, Any]:
@@ -38,6 +42,8 @@ def read_transactions(
     conditions = []
     if envelope_id is not None:
         conditions.append(Transaction.envelope_id == envelope_id)
+    if envelope_ids:
+        conditions.append(Transaction.envelope_id.in_(envelope_ids))
     if account_id is not None:
         # Match account_id ATAU transfer_account_id (untuk transfer)
         from sqlalchemy import or_
@@ -47,14 +53,28 @@ def read_transactions(
                 Transaction.transfer_account_id == account_id,
             )
         )
+    if account_ids:
+        from sqlalchemy import or_
+        conditions.append(
+            or_(
+                Transaction.account_id.in_(account_ids),
+                Transaction.transfer_account_id.in_(account_ids),
+            )
+        )
     if type is not None:
         conditions.append(Transaction.type == type)
+    if types:
+        conditions.append(Transaction.type.in_(types))
     if date_from is not None:
         conditions.append(Transaction.date >= date_from)
     if date_to is not None:
         conditions.append(Transaction.date <= date_to)
     if payee_contains:
         conditions.append(Transaction.payee.ilike(f"%{payee_contains}%"))
+    if search:
+        from sqlalchemy import or_
+        term = f"%{search}%"
+        conditions.append(or_(Transaction.payee.ilike(term), Transaction.memo.ilike(term)))
 
     user = current_user()
     with user_session(user.db_url) as session:
