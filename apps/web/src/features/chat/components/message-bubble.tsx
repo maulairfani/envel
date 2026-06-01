@@ -1,5 +1,4 @@
-import { cn } from "@/lib/utils";
-import { LogoMark } from "@/components/brand/logo";
+import { Sparkles } from "lucide-react";
 import { ToolCallView } from "./tool-call-view";
 import type { ChatMessage } from "../types";
 
@@ -21,7 +20,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
   return (
     <div className="flex gap-3">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-        <LogoMark className="size-5" />
+        <Sparkles className="size-4" />
       </div>
       <div className="min-w-0 flex-1 space-y-2 pt-0.5">
         {message.toolCalls && message.toolCalls.length > 0 && (

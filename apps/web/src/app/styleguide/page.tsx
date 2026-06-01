@@ -19,7 +19,7 @@ import {
   Avatar,
   MoneyText,
 } from "@/components/ui";
-import { Logo, LogoMark } from "@/components/brand/logo";
+import { Logo } from "@/components/brand/logo";
 import { MessageBubble } from "@/features/chat";
 import type { ChatMessage } from "@/features/chat";
 
@@ -86,13 +86,11 @@ export default function StyleguidePage() {
 
       <div className="space-y-14">
         <Section title="Brand">
-          <div className="flex flex-wrap items-center gap-8">
+          <div className="flex flex-wrap items-center gap-8 rounded-lg border border-border bg-surface p-6">
             <Logo />
-            <Logo markOnly />
-            <div className="flex items-center gap-2 rounded-lg bg-primary px-4 py-3 text-primary-foreground">
-              <LogoMark className="size-6" />
-              <span className="text-lg font-semibold lowercase">envel</span>
-            </div>
+            <span className="text-xs text-muted-foreground">
+              Wordmark lockup — header only
+            </span>
           </div>
         </Section>
 
