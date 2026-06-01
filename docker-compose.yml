@@ -9,3 +9,6 @@ include:
     env_file: ./apps/mcp-server/.env
   - path: ./apps/agent/docker-compose.yml
     env_file: ./apps/agent/.env
+  # web needs no per-app .env: its config is fixed internal service URLs set
+  # inline in `environment:`, and ENVEL_TAG comes from the deploy shell.
+  - path: ./apps/web/docker-compose.yml

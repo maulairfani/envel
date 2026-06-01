@@ -61,4 +61,17 @@ else
   exit 1
 fi
 
+echo ">> Health check (web login page)"
+web_ok=
+for i in $(seq 1 20); do
+  if curl -fsS http://localhost:3000/login >/dev/null 2>&1; then web_ok=1; break; fi
+  sleep 3
+done
+if [ -n "$web_ok" ]; then
+  echo "   web OK"
+else
+  echo "   web health FAILED after ~60s" >&2
+  exit 1
+fi
+
 echo ">> Deploy done @ tag=${ENVEL_TAG}"

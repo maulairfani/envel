@@ -46,8 +46,16 @@ GHCR push uses the built-in `GITHUB_TOKEN` (no secret needed).
    ENVEL_TAG=latest bash scripts/deploy.sh
    ```
 6. Point nginx (host) at the published ports: mcp `:8001`, auth `:9000`,
-   agent `:8002` (e.g. `envel.dev/mcp`, `envel.dev/auth`, and a subdomain for the
-   agent). The containers join the shared `envel` network internally.
+   agent `:8002`, web `:3000` (e.g. `envel.dev/mcp`, `envel.dev/auth`, a subdomain
+   for the agent, and **`chat.envel.dev` → `:3000`** for the web app). The
+   containers join the shared `envel` network internally.
+   - The web app needs no `.env`: its config is fixed internal URLs set inline in
+     `apps/web/docker-compose.yml` (`AUTH_URL=http://auth-server:9000`,
+     `AGENT_URL=http://agent:8000`, `MCP_URL=http://mcp-server:8000/mcp`).
+   - For native login to work behind the proxy, forward the real host headers
+     (`Host`/`X-Forwarded-Host`/`X-Forwarded-Proto`) so the server-side OAuth
+     `redirect_uri` resolves to `https://chat.envel.dev/`, and **whitelist that
+     redirect_uri on the auth-server**.
 
 > Migrating from the old systemd setup: stop/disable `envel-auth`, `envel-mcp`,
 > `envel-platform` services first so they don't fight for the ports.
@@ -63,7 +71,8 @@ GHCR push uses the built-in `GITHUB_TOKEN` (no secret needed).
 
 `scripts/deploy.sh` pulls images, runs MCP Alembic migrations for every
 `user_*` schema, starts the stack, and fails the deploy if the agent `/ok`
-health check doesn't pass.
+or web `/login` health check doesn't pass. The web image is a Next.js
+standalone build (no DB, no migrations) — it just gets pulled and restarted.
 
 ## Dev vs prod compose
 

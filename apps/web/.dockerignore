@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+Dockerfile
+.dockerignore
+.env*
+!.env.example
+npm-debug.log*
+.playwright-mcp
+*.png
+README.md

@@ -1,0 +1,30 @@
+services:
+  web:
+    image: ghcr.io/maulairfani/envel-web:${ENVEL_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: envel-web
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      # internal service URLs on the shared `envel` network (container:port).
+      # The browser never talks to these directly — the web server does the
+      # OAuth code exchange and the /api/lg proxy + MCP read-path server-side.
+      AUTH_URL: http://auth-server:9000
+      AGENT_URL: http://agent:8000
+      MCP_URL: http://mcp-server:8000/mcp
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - envel
+    restart: unless-stopped
+
+networks:
+  envel:
+    name: envel
