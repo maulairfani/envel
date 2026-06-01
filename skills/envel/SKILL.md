@@ -68,7 +68,7 @@ numbers before reasoning further. Never guess IDs — get them from get_workspac
 | `get_workspace(period?)`           | Read accounts (+balance), envelopes (+assigned/activity/available), groups, summary, RTA | The discovery/read tool. `period` defaults to current month.                                                                                   |
 | `read_transactions(...)`           | List/filter transactions                                                                 | Filters: `envelope_id, account_id, type, date_from, date_to, payee_contains, limit, offset`. Newest first. `limit` ≤ 1000. Returns `has_more`. |
 | `write_transactions(operations[])` | Create/update/delete transactions in bulk                                                | **Atomic per call** — one failure rolls back all. See ops below.                                                                               |
-| `plan_action(operations[])`        | Assign budget / move money between envelopes                                             | **Atomic**. `assign` (set/add) and `move`. See below.                                                                                          |
+| `plan_action(operations[])`        | Assign budget / move money between envelopes / set an account balance                    | **Atomic**. `assign` (set/add), `move`, `adjust_balance`. Returns updated `ready_to_assign`. See below.                                         |
 | `account_crud(payload)`            | One account create/update/delete                                                         | type ∈ `cash, bank, ewallet, credit_card`.                                                                                                     |
 | `envelope_crud(payload)`           | One envelope create/update/delete                                                        | Supports `icon` (lucide name), `group_id`, target fields.                                                                                      |
 | `envelope_group_crud(payload)`     | One group create/update/delete                                                           | `name`, `sort_order`.                                                                                                                          |
@@ -105,8 +105,18 @@ one `write_transactions` call (atomic).
 - `move`: `{op:"move", from_envelope_id, to_envelope_id, period, amount}`
   — `amount` positive; subtracts from `from`, adds to `to`. Use this to cover an
   overspent envelope from another one (RTA-neutral).
+- `adjust_balance`: `{op:"adjust_balance", account_id, target_balance}`
+  — **set an account's balance** to `target_balance` (absolute IDR). Balances are
+  derived from transactions, so this creates one unassigned adjustment
+  transaction for the difference. The difference flows straight into/out of
+  **RTA**: raising a balance increases RTA, lowering it decreases RTA (can go
+  negative). Use this when the user says "set/ubah saldo akun X jadi N" —
+  **do not** hand-craft a `write_transactions` adjustment for that.
 
-`plan_action` never touches carryover — it is derived on read.
+`plan_action` never touches carryover — it is derived on read. The call returns
+the updated `ready_to_assign` (current month); **always read it back and tell the
+user the new RTA** — if positive, that's unassigned money to give a job; if
+negative, they've over-assigned and need to pull money back.
 
 ## Workflows
 
@@ -118,8 +128,8 @@ one `write_transactions` call (atomic).
 4. Create **envelopes** (`envelope_crud`) under groups; set a fitting `icon`
    (lucide name, kebab-case — e.g. `utensils`, `car`, `home`; see lucide.dev/icons)
    and a `target_type`/`target_amount` where the user has a goal.
-5. Record current balances as income into Ready To Assign (one `create_income`
-   per account with no envelope), or as the user prefers.
+5. Set each account's starting balance with `plan_action` `adjust_balance`
+   (one op per account) — the balances flow into Ready To Assign.
 6. **Assign** RTA to envelopes via `plan_action` until **RTA = 0**.
 7. Confirm setup is complete and recap the budget.
 

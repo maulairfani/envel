@@ -42,14 +42,28 @@ export function toChatMessages(messages: Message[]): ChatMessage[] {
           status: hasResult ? "success" : "running",
         };
       });
-      out.push({
-        id: m.id ?? `a-${out.length}`,
-        role: "assistant",
-        content: toText(m.content),
-        toolCalls: toolCalls.length ? toolCalls : undefined,
-      });
+
+      // A single agent turn spans several `ai` messages (tool-call message, then
+      // the final text). Merge consecutive ones so the turn renders one avatar.
+      const prev = out[out.length - 1];
+      if (prev && prev.role === "assistant") {
+        prev.content = [prev.content, toText(m.content)].filter(Boolean).join("\n\n");
+        if (toolCalls.length) prev.toolCalls = [...(prev.toolCalls ?? []), ...toolCalls];
+      } else {
+        out.push({
+          id: m.id ?? `a-${out.length}`,
+          role: "assistant",
+          content: toText(m.content),
+          toolCalls: toolCalls.length ? toolCalls : undefined,
+        });
+      }
     }
     // "tool" and "system" messages are folded in / ignored for display.
   }
-  return out;
+
+  // Drop assistant turns that ended up with neither text nor tool calls
+  // (e.g. empty streaming chunks) so no blank bubble is rendered.
+  return out.filter(
+    (m) => m.role !== "assistant" || m.content.length > 0 || (m.toolCalls?.length ?? 0) > 0,
+  );
 }
